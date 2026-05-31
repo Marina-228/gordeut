@@ -7,7 +7,21 @@ import { ru } from 'date-fns/locale';
 
 registerLocale('ru', ru);
 
+
 export default function CottageDetails() {
+
+  // 1. ВСТАВЬТЕ ЭТОТ БЛОК ПРЯМО ЗДЕСЬ
+  const calendarStyles = (
+    <style>{`
+      .custom-calendar .react-datepicker__day--disabled {
+        background-color: #f0f0f0 !important;
+        color: #ccc !important;
+        cursor: not-allowed !important;
+        text-decoration: line-through;
+      }
+    `}</style>
+  );
+
   const { id } = useParams();
   const navigate = useNavigate();
   const [cottage, setCottage] = useState(null);
@@ -54,6 +68,22 @@ export default function CottageDetails() {
       return;
     }
 
+    // НОВАЯ ПРОВЕРКА: Проверка пересечения с занятыми датами
+    if (startDate && endDate) {
+      const isOverlapping = bookedDates.some(busyDate => {
+        // Приводим к формату без времени для сравнения
+        const bDate = new Date(busyDate).setHours(0,0,0,0);
+        const start = new Date(startDate).setHours(0,0,0,0);
+        const end = new Date(endDate).setHours(0,0,0,0);
+        return bDate >= start && bDate <= end;
+      });
+
+      if (isOverlapping) {
+        alert("❌ Выбранные даты пересекаются с уже забронированными!");
+        return;
+      }
+    }
+
     // 3. Безопасное форматирование с проверкой типа
     const formatDate = (date) => {
       if (!(date instanceof Date) || isNaN(date)) return null;
@@ -87,21 +117,45 @@ export default function CottageDetails() {
     }
   };
 
-  useEffect(() => {
-    const fetchCottage = async () => {
-      try {
-        const response = await API.get(`/cottages/${id}`);
-        setCottage(response.data);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
-    };
-    fetchCottage();
-  }, [id]);
+  const [bookedDates, setBookedDates] = useState([]);
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // 1. Грузим данные домика
+      const cottageRes = await API.get(`/cottages/${id}`);
+      setCottage(cottageRes.data);
+
+      // 2. Грузим занятые даты
+      const datesRes = await API.get(`/bookings/cottages/${id}/booked-dates`);
+      
+      // Преобразуем диапазон [start, end] в массив всех занятых дней
+      const busy = [];
+datesRes.data.forEach(b => {
+  // Используем split('T')[0], чтобы отсечь время и работать только с датой
+  let start = new Date(b.start_date.split('T')[0]);
+  let end = new Date(b.end_date.split('T')[0]);
+  
+  let current = new Date(start);
+  while (current <= end) {
+    busy.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+});
+setBookedDates(busy);
+
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+  fetchData();
+}, [id]);
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Загрузка...</div>;
   if (!cottage) return <div style={{ padding: '40px', textAlign: 'center' }}>Коттедж не найден</div>;
 
   return (
+    console.log("Занятые даты:", bookedDates), // ДЛЯ ОТЛАДКИ
     <div style={{ padding: '40px 5%', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      {calendarStyles}
       <div style={{ display: 'flex', gap: '50px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         
         {/* ЛЕВЫЙ БЛОК */}
@@ -153,16 +207,23 @@ export default function CottageDetails() {
     </div>
   </div>
 
-  <DatePicker
-    selected={startDate}
-    onChange={(dates) => { const [start, end] = dates; setStartDate(start); setEndDate(end); }}
-    startDate={startDate}
-    endDate={endDate}
-    selectsRange
-    inline
-    locale="ru"
-    minDate={new Date()}
-  />
+<DatePicker
+  selected={startDate}
+  onChange={(dates) => { 
+    const [start, end] = dates; 
+    setStartDate(start); 
+    setEndDate(end); 
+  }}
+  startDate={startDate}
+  endDate={endDate}
+  selectsRange
+  inline
+  locale="ru"
+  minDate={new Date()}
+  // ВАЖНО: вот эта строка отвечает за отображение занятых дат
+  excludeDates={bookedDates} 
+  calendarClassName="custom-calendar" // ЭТО ВАЖНО: класс должен совпадать с CSS
+/>
           {startDate && endDate && (
             <div style={{ marginTop: '25px', padding: '15px', background: '#f7faf7', borderRadius: '12px' }}>
               <p>Итого за {getDiffDays()} суток:</p>

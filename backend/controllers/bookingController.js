@@ -72,21 +72,23 @@ export const createBooking = async (req, res) => {
 };
 
 export const cancelBooking = async (req, res) => {
-  const { id } = req.params; // ID бронирования из URL
-  const userId = req.user.id; // ID пользователя из middleware (protect)
+  const { id } = req.params;
+  
+  // Добавим проверку, есть ли вообще req.user
+  if (!req.user) {
+    return res.status(401).json({ message: "Пользователь не авторизован" });
+  }
 
-  console.log("Отмена брони ID:", id, "для пользователя:", userId);
+  const userId = req.user.id;
+
+  console.log("Пытаюсь отменить:", { id, userId });
 
   try {
-    // Выполняем UPDATE только если запись принадлежит этому пользователю
     const result = await pool.query(
       'UPDATE bookings SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
       ['cancelled', id, userId]
     );
 
-    // Если ничего не обновилось (rowCount === 0), значит:
-    // 1. Брони с таким ID не существует
-    // 2. Или она принадлежит другому пользователю (безопасность)
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Бронирование не найдено или доступ запрещен' });
     }
@@ -94,7 +96,30 @@ export const cancelBooking = async (req, res) => {
     res.json({ message: 'Бронирование успешно отменено', booking: result.rows[0] });
     
   } catch (err) {
-    console.error("Ошибка базы данных:", err);
-    res.status(500).json({ message: 'Ошибка сервера при отмене' });
+    // ВАЖНО: Смотрите прямо СЮДА в терминале сервера
+    console.error("ОШИБКА БД В cancelBooking:", err);
+    res.status(500).json({ message: 'Ошибка сервера при отмене', error: err.message });
   }
+};
+
+export const getBookedDates = async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        // ИСПРАВЛЕНО: заменили '==' на '='
+        const query = `
+            SELECT start_date, end_date 
+            FROM bookings 
+            WHERE cottage_id = $1 
+            AND status = 'pending'
+        `;
+        
+        const result = await pool.query(query, [id]);
+        
+        res.json(result.rows); 
+        
+    } catch (err) {
+        console.error("Ошибка при получении дат из БД:", err);
+        res.status(500).json({ error: "Ошибка при получении дат из базы данных" });
+    }
 };

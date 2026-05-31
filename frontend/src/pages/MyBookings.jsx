@@ -6,29 +6,38 @@ export default function MyBookings() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await API.get('/bookings/my');
-        setBookings(response.data);
-      } catch (err) {
-        console.error("Ошибка загрузки:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBookings();
-  }, []);
-
-  const handleCancel = async (id) => {
-    if (!window.confirm("Вы уверены, что хотите отменить бронирование?")) return;
+  // Определяем функцию ВНУТРИ эффекта, чтобы избежать каскадных рендеров
+  const fetchData = async () => {
     try {
-      await API.patch(`/bookings/${id}/cancel`);
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+      setLoading(true);
+      const { data } = await API.get('/bookings/my');
+      setBookings(data);
     } catch (err) {
-      alert("Ошибка при отмене: возможно, соединение с сервером разорвано.");
+      console.error("Ошибка:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
+  fetchData();
+}, []); // Пустой массив зависимостей
+
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm("Вы уверены, что хотите отменить бронирование?")) return;
+
+    try {
+      await API.delete(`/bookings/${bookingId}`);
+      alert("✅ Бронирование отменено");
+      
+      // Локальное обновление статуса
+      setBookings(prev => 
+        prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b)
+      );
+    } catch (err) {
+      alert("❌ Не удалось отменить: " + (err.response?.data?.message || "Ошибка"));
+    }
+  };
+  
   const getStatusInfo = (status) => {
     switch(status) {
       case 'confirmed': return { label: 'Подтверждено', color: '#059669', bg: '#d1fae5' };
@@ -56,12 +65,13 @@ export default function MyBookings() {
       ) : (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(650px, 1fr))', 
+          // Адаптивная сетка: на мобильных от 320px, на десктопах заполняет доступное место
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
           gap: '24px' 
         }}>
           {bookings.map(b => {
+            
             const statusInfo = getStatusInfo(b.status);
-            // Если у вас есть локальный файл, можно использовать путь /images/cottage.jpg
             const imageUrl = b.media_urls?.[0]; 
 
             return (
@@ -71,33 +81,23 @@ export default function MyBookings() {
                 borderRadius: '24px', 
                 boxShadow: '0 8px 24px rgba(0,0,0,0.05)',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '24px',
-                border: '1px solid #f3f4f6',
-                transition: 'transform 0.3s ease, box-shadow 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.05)';
+                flexDirection: 'column', // Удобнее на мобильных
+                gap: '16px',
+                border: '1px solid #f3f4f6'
               }}>
-                
-                <div style={{ width: '250px', height: '130px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, background: '#eee' }}>
-                  <img src={imageUrl || 'https://via.placeholder.com/130'} alt={b.cottage_name}
+                <div style={{ width: '100%', height: '180px', borderRadius: '20px', overflow: 'hidden', background: '#eee' }}>
+                  <img src={imageUrl || 'https://via.placeholder.com/400x200'} alt={b.cottage_name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
 
                 <div style={{ flexGrow: 1 }}>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontWeight: '700', color: '#111' }}>{b.cottage_name}</h3>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: '700', color: '#111' }}>{b.cottage_name}</h3>
                   <div style={{ color: '#666', fontSize: '15px' }}>
                     📅 {new Date(b.start_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} — {new Date(b.end_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                   <div style={{ 
                     backgroundColor: statusInfo.bg, color: statusInfo.color,
                     padding: '8px 18px', borderRadius: '14px', fontSize: '13px', fontWeight: '700'
@@ -105,18 +105,15 @@ export default function MyBookings() {
                     {statusInfo.label}
                   </div>
                   
-                  <div style={{ fontWeight: '800', fontSize: '19px', color: '#111', minWidth: '90px', textAlign: 'right' }}>
-                    {parseFloat(b.total_price).toLocaleString()} BYN
+                  <div style={{ fontWeight: '800', fontSize: '19px', color: '#111' }}>
+                    {b.total_price ? parseFloat(b.total_price).toLocaleString() : '0'} BYN
                   </div>
 
                   {b.status === 'pending' && (
-                    <button onClick={() => handleCancel(b.id)} style={{
-                      background: '#fff', border: '1.5px solid #fee2e2', color: '#dc2626', 
-                      fontSize: '14px', cursor: 'pointer', borderRadius: '12px', padding: '10px 20px',
-                      fontWeight: '600', transition: 'all 0.2s', outline: 'none'
-                    }}
-                    onMouseOver={(e) => { e.target.style.background = '#fee2e2'; }}
-                    onMouseOut={(e) => { e.target.style.background = '#fff'; }}>
+                    <button 
+                      onClick={() => handleCancel(b.id)}
+                      style={{ background: '#ff4d4d', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer' }}
+                    >
                       Отменить
                     </button>
                   )}

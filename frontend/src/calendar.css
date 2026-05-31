@@ -1,0 +1,6 @@
+.react-datepicker__day--disabled {
+  color: #ccc !important;
+  background-color: #f0f0f0 !important;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}

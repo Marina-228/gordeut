@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 
 import { AuthProvider } from './context/AuthContext'; 
 import { CottageProvider } from './context/CottageContext';
+import './calendar.css';
 export default function App() {
   const globalStyles = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',

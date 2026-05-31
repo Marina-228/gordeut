@@ -3,11 +3,10 @@ import pool from '../db.js';
 // 1. Получение всех домиков
 export const getCottages = async (req, res) => {
   try {
-    // Используем "title AS name", чтобы если в базе колонка называется title, фронтенд получал привычный name
     const result = await pool.query(`
       SELECT 
         id, 
-        title AS name, 
+        name, 
         rooms, 
         type, 
         min_guests, 
@@ -19,12 +18,12 @@ export const getCottages = async (req, res) => {
         price_per_night, 
         media_urls 
       FROM cottages 
-      ORDER BY created_at DESC
+      ORDER BY id DESC
     `);
     res.json(result.rows);
   } catch (err) {
     console.error('Ошибка при загрузке домиков:', err);
-    res.status(500).json({ message: 'Ошибка при загрузке домиков' });
+    res.status(500).json({ message: 'Ошибка при загрузке домиков', error: err.message });
   }
 };
 
@@ -35,7 +34,7 @@ export const getCottageById = async (req, res) => {
     const result = await pool.query(`
       SELECT 
         id, 
-        title AS name, 
+        name, 
         rooms, 
         type, 
         min_guests, 
@@ -58,7 +57,7 @@ export const getCottageById = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error(`Ошибка при получении домика с ID ${id}:`, err);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    res.status(500).json({ message: 'Ошибка сервера', error: err.message });
   }
 };
 
@@ -82,16 +81,15 @@ export const createCottage = async (req, res) => {
     
     const mediaUrlsArray = image ? [image] : [];
 
-    // ВНИМАНИЕ: Здесь вместо name пишем title, так как Postgres ожидает название колонки title
     const newCottage = await pool.query(
       `INSERT INTO cottages (
-        title, rooms, type, min_guests, max_guests, has_discount, 
+        name, rooms, type, min_guests, max_guests, has_discount, 
         region, city, address, breakfast_included, bed_type, 
         price_per_night, description, media_urls
       ) VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7, $8, $9, $10, $11, $12, $13) 
-      RETURNING id, title AS name, price_per_night, media_urls`,
+      RETURNING id, name, price_per_night, media_urls`,
       [
-        name, // Твой React присылает 'name', записываем его в 'title' базы данных
+        name, 
         parsedRooms, 
         type || 'house', 
         parsedMinGuests, 
@@ -122,12 +120,11 @@ export const createCottage = async (req, res) => {
   }
 };
 
-// 4. НОВОЕ: Удаление домика (Экспортируем для роутера)
+// 4. Удаление домика
 export const deleteCottage = async (req, res) => {
   const { id } = req.params;
   
   try {
-    // Сначала проверяем, есть ли такой объект в БД
     const checkResult = await pool.query('SELECT * FROM cottages WHERE id = $1', [id]);
     
     if (checkResult.rows.length === 0) {
@@ -137,10 +134,8 @@ export const deleteCottage = async (req, res) => {
       });
     }
 
-    // Удаляем
     await pool.query('DELETE FROM cottages WHERE id = $1', [id]);
 
-    // Отдаем обязательный флаг success: true, который ждет фронтенд
     res.json({ 
       success: true, 
       message: 'Объект успешно удален' 
@@ -152,5 +147,94 @@ export const deleteCottage = async (req, res) => {
       message: 'Ошибка сервера при удалении объекта', 
       error: err.message 
     });
+  }
+};
+
+// 5. Поиск и фильтрация домиков (Заменили * на явный выбор полей с name)
+export const searchCottages = async (req, res) => {
+  try {
+    const { city, region, type, max_guests, start_date, end_date } = req.query;
+
+    // ИСПРАВЛЕНО: Явно перечисляем колонки, используем name вместо title
+    let queryText = `
+      SELECT 
+        id, name, rooms, type, min_guests, max_guests, 
+        region, city, address, description, price_per_night, media_urls 
+      FROM cottages 
+      WHERE 1=1
+    `;
+    const queryParams = [];
+    let paramIndex = 1;
+
+    // Фильтр по городу
+    if (city) {
+      queryText += ` AND city ILIKE $${paramIndex}`;
+      queryParams.push(`%${city}%`);
+      paramIndex++;
+    }
+
+    // Фильтр по области
+    if (region) {
+      queryText += ` AND region = $${paramIndex}`;
+      queryParams.push(region);
+      paramIndex++;
+    }
+
+    // Фильтр по типу жилья
+    if (type) {
+      queryText += ` AND type = $${paramIndex}`;
+      queryParams.push(type);
+      paramIndex++;
+    }
+
+    // Фильтр по вместимости гостей
+    if (max_guests) {
+      queryText += ` AND max_guests >= $${paramIndex}`;
+      queryParams.push(parseInt(max_guests));
+      paramIndex++;
+    }
+
+    // Фильтрация дат
+    if (start_date && end_date) {
+      queryText += ` AND id NOT IN (
+        SELECT cottage_id FROM bookings 
+        WHERE NOT (end_date <= $${paramIndex} OR start_date >= $${paramIndex + 1})
+      )`;
+      queryParams.push(start_date, end_date);
+      paramIndex += 2;
+    }
+
+    queryText += ` ORDER BY id DESC`;
+
+    const result = await pool.query(queryText, queryParams);
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error('Ошибка при поиске домиков:', err);
+
+    // Резервный фолбек (тоже с явным перечислениемname)
+    if (err.message.includes('bookings') || err.message.includes('relation') || err.message.includes('getaddrinfo')) {
+      try {
+        console.log('Выполняется резервный поиск вариантов...');
+        let backupQuery = `
+          SELECT id, name, rooms, type, min_guests, max_guests, region, city, address, description, price_per_night, media_urls 
+          FROM cottages WHERE 1=1
+        `;
+        const backupParams = [];
+        let bIdx = 1;
+
+        if (city) { backupQuery += ` AND city ILIKE $${bIdx}`; backupParams.push(`%${city}%`); bIdx++; }
+        if (region) { backupQuery += ` AND region = $${bIdx}`; backupParams.push(region); bIdx++; }
+        if (max_guests) { backupQuery += ` AND max_guests >= $${bIdx}`; backupParams.push(parseInt(max_guests)); bIdx++; }
+        
+        backupQuery += ` ORDER BY id DESC`;
+        const backupResult = await pool.query(backupQuery, backupParams);
+        return res.json(backupResult.rows);
+      } catch (backupErr) {
+        return res.status(500).json({ message: 'Критическая ошибка базы данных', error: backupErr.message });
+      }
+    }
+
+    res.status(500).json({ message: 'Ошибка сервера при поиске объектов', error: err.message });
   }
 };

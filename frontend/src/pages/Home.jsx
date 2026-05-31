@@ -9,7 +9,6 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   // Получаем данные текущего пользователя, чтобы узнать его роль
-  // (Замени 'user' на ключ, под которым ты сохраняешь данные юзера при авторизации)
   const currentUser = JSON.parse(localStorage.getItem('user')) || null;
   const isAdmin = currentUser?.role === 'admin';
 
@@ -20,7 +19,14 @@ export default function Home() {
         setCottages(response.data);
       } catch (err) {
         console.error("Ошибка при загрузке домиков:", err);
-        setError('Не удалось загрузить каталог домиков.');
+        
+        // Достаем точное текстовое описание ошибки из бэкенда (из err.response)
+        const serverDetail = err.response?.data?.error || err.response?.data?.message || err.message;
+        
+        // Показываем громкое уведомление разработчику
+        alert(`Ошибка БД на бэкенде: ${serverDetail}`);
+        
+        setError(`Не удалось загрузить каталог домиков. Причина: ${serverDetail}`);
       } finally {
         setLoading(false);
       }
@@ -30,42 +36,38 @@ export default function Home() {
 
   // Функция удаления карточки домика
   const handleDelete = async (id, name) => {
-  const confirmDelete = window.confirm(`Вы уверены, что хотите удалить объект "${name || 'Без названия'}"?`);
-  if (!confirmDelete) return;
+    const confirmDelete = window.confirm(`Вы уверены, что хотите удалить объект "${name || 'Без названия'}"?`);
+    if (!confirmDelete) return;
 
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      alert("Ошибка: Токен авторизации не найден. Пожалуйста, перезайдите в аккаунт.");
-      return;
-    }
-
-    // Делаем запрос через axios (API.delete уже включает базовый URL)
-    const response = await API.delete(`/cottages/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}` // Передаем токен в явном виде
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert("Ошибка: Токен авторизации не найден. Пожалуйста, перезайдите в аккаунт.");
+        return;
       }
-    });
 
-    // Если сервер вернул success
-    if (response.data.success) {
-      setCottages(prev => prev.filter(cottage => cottage.id !== id));
-      alert('Объявление успешно удалено!');
-    } else {
-      alert(`Не удалось удалить: ${response.data.message}`);
+      // Делаем запрос через axios
+      const response = await API.delete(`/cottages/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}` 
+        }
+      });
+
+      // Если сервер вернул success
+      if (response.data.success) {
+        setCottages(prev => prev.filter(cottage => cottage.id !== id));
+        alert('Объявление успешно удалено!');
+      } else {
+        alert(`Не удалось удалить: ${response.data.message}`);
+      }
+
+    } catch (err) {
+      console.error("Полная ошибка удаления на фронте:", err);
+      const serverMessage = err.response?.data?.message || err.response?.data?.error;
+      alert(`Ошибка при удалении: ${serverMessage || 'Сервер не отвечает или упал'}`);
     }
-
-  } catch (err) {
-    console.error("Полная ошибка удаления на фронте:", err);
-    
-    // Выводим то, что реально ответил сервер, чтобы не гадать
-    const serverMessage = err.response?.data?.message || err.response?.data?.error;
-    alert(`Ошибка при удалении: ${serverMessage || 'Сервер не отвечает или упал'}`);
-  }
-};
-
-  
+  };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>⏳ Загрузка уютных домиков...</div>;
   if (error) return <div style={{ padding: '20px', color: '#e74c3c', textAlign: 'center' }}>⚠️ {error}</div>;
@@ -120,8 +122,8 @@ export default function Home() {
               background: '#fff',
               padding: '20px', 
               alignItems: 'center', 
-              justifyContent: 'space-between',
-              position: 'relative' // Для абсолютного позиционирования элементов внутри, если понадобится
+              justify: 'space-between',
+              position: 'relative'
             }}
           >
             {/* Контейнер контента */}
@@ -136,7 +138,7 @@ export default function Home() {
                 marginBottom: '15px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justify: 'center',
                 overflow: 'hidden'
               }}>
                 {cottage.media_urls?.[0] ? (
@@ -210,7 +212,7 @@ export default function Home() {
                 Подробнее
               </Link>
 
-              {/* Кнопка Удалить (Рендерится только ЕСЛИ пользователь является АДМИНИСТРАТОРОМ) */}
+              {/* Кнопка Удалить (Доступна только админам) */}
               {isAdmin && (
                 <button
                   onClick={() => handleDelete(cottage.id, cottage.name)}

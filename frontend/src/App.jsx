@@ -7,7 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CottageDetails from './pages/CottageDetail';
 import Profile from './pages/Profile';
-import { HomeSearch } from './pages/HomeSearch';
+// ИСПРАВЛЕНО: Убрали фигурные скобки и импортируем как дефолтный компонент Search
+import Search from './pages/HomeSearch';
 import AddCottage from './pages/AddCottage';
 
 // 1. Импортируем провайдер
@@ -51,7 +52,8 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/cottage/:id" element={<CottageDetails />} />
-                <Route path="/search" element={<HomeSearch />} />
+                {/* ИСПРАВЛЕНО: Передаем корректный компонент Search */}
+                <Route path="/search" element={<Search />} />
                 <Route path="/add-cottage" element={isAuth ? <AddCottage /> : <Navigate to="/login" />} />
                 <Route 
                   path="/profile" 

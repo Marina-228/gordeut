@@ -1,30 +1,23 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
-
+import ProtectedRoute from './components/ProtectedRoute'; 
+import MyBookings from './pages/MyBookings';
+import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
-import Login from './pages/Login';
 import Register from './pages/Register';
 import CottageDetails from './pages/CottageDetail';
-import Profile from './pages/Profile';
-// ИСПРАВЛЕНО: Убрали фигурные скобки и импортируем как дефолтный компонент Search
 import Search from './pages/HomeSearch';
-import AddCottage from './pages/AddCottage';
+import AddCottage from "./pages/AddCottage"; // Оставляем только этот, если он существует
+import Profile from './pages/Profile';
 
-import MyBookings from './pages/MyBookings';
-// 1. Импортируем провайдер
 import { AuthProvider } from './context/AuthContext'; 
 import { CottageProvider } from './context/CottageContext';
-
 export default function App() {
-  const [isAuth] = useState(() => !!localStorage.getItem('token'));
-
   const globalStyles = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   };
 
   return (
-    // 2. Оборачиваем все в провайдеры
     <AuthProvider>
       <CottageProvider> 
         <Router>
@@ -49,18 +42,24 @@ export default function App() {
               overflowY: 'auto'
             }}>
               <Routes>
-                <Route path="/my-bookings" element={<MyBookings />} />
+                {/* Публичные маршруты */}
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/cottage/:id" element={<CottageDetails />} />
-                {/* ИСПРАВЛЕНО: Передаем корректный компонент Search */}
                 <Route path="/search" element={<Search />} />
-                <Route path="/add-cottage" element={isAuth ? <AddCottage /> : <Navigate to="/login" />} />
-                <Route 
-                  path="/profile" 
-                  element={isAuth ? <Profile /> : <Navigate to="/login" replace />} 
-                />
+                
+                {/* Приватные маршруты (оборачиваем в ProtectedRoute) */}
+                <Route path="/my-bookings" element={
+                  <ProtectedRoute><MyBookings /></ProtectedRoute>
+                } />
+                <Route path="/add-cottage" element={
+                  <ProtectedRoute><AddCottage /></ProtectedRoute>
+                } />
+                
+                <Route path="/profile" element={
+                  <ProtectedRoute><Profile /></ProtectedRoute>
+                } />
               </Routes>
             </div>
           </div>

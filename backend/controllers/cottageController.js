@@ -153,48 +153,54 @@ export const deleteCottage = async (req, res) => {
 // 5. Поиск и фильтрация домиков (Заменили * на явный выбор полей с name)
 export const searchCottages = async (req, res) => {
   try {
-    const { city, region, type, max_guests, start_date, end_date } = req.query;
+    const { city, region, type, max_guests, start_date, end_date, query } = req.query;
 
-    // ИСПРАВЛЕНО: Явно перечисляем колонки, используем name вместо title
+    // Базовый запрос
     let queryText = `
-      SELECT 
-        id, name, rooms, type, min_guests, max_guests, 
-        region, city, address, description, price_per_night, media_urls 
+      SELECT id, name, rooms, type, min_guests, max_guests, 
+             region, city, address, description, price_per_night, media_urls 
       FROM cottages 
       WHERE 1=1
     `;
     const queryParams = [];
     let paramIndex = 1;
 
-    // Фильтр по городу
+    // 1. Текстовый поиск (по названию или описанию)
+    if (query) {
+      queryText += ` AND (name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`;
+      queryParams.push(`%${query}%`);
+      paramIndex++;
+    }
+
+    // 2. Фильтр по городу
     if (city) {
       queryText += ` AND city ILIKE $${paramIndex}`;
       queryParams.push(`%${city}%`);
       paramIndex++;
     }
 
-    // Фильтр по области
+    // 3. Фильтр по области
     if (region) {
       queryText += ` AND region = $${paramIndex}`;
       queryParams.push(region);
       paramIndex++;
     }
 
-    // Фильтр по типу жилья
+    // 4. Фильтр по типу
     if (type) {
       queryText += ` AND type = $${paramIndex}`;
       queryParams.push(type);
       paramIndex++;
     }
 
-    // Фильтр по вместимости гостей
+    // 5. Фильтр по гостям
     if (max_guests) {
       queryText += ` AND max_guests >= $${paramIndex}`;
       queryParams.push(parseInt(max_guests));
       paramIndex++;
     }
 
-    // Фильтрация дат
+    // 6. Фильтрация дат (доступность)
     if (start_date && end_date) {
       queryText += ` AND id NOT IN (
         SELECT cottage_id FROM bookings 
@@ -211,31 +217,6 @@ export const searchCottages = async (req, res) => {
 
   } catch (err) {
     console.error('Ошибка при поиске домиков:', err);
-
-    // Резервный фолбек (тоже с явным перечислениемname)
-    if (err.message.includes('bookings') || err.message.includes('relation') || err.message.includes('getaddrinfo')) {
-      try {
-        console.log('Выполняется резервный поиск вариантов...');
-        let backupQuery = `
-          SELECT id, name, rooms, type, min_guests, max_guests, region, city, address, description, price_per_night, media_urls 
-          FROM cottages WHERE 1=1
-        `;
-        const backupParams = [];
-        let bIdx = 1;
-
-        if (city) { backupQuery += ` AND city ILIKE $${bIdx}`; backupParams.push(`%${city}%`); bIdx++; }
-        if (region) { backupQuery += ` AND region = $${bIdx}`; backupParams.push(region); bIdx++; }
-        if (max_guests) { backupQuery += ` AND max_guests >= $${bIdx}`; backupParams.push(parseInt(max_guests)); bIdx++; }
-        
-        backupQuery += ` ORDER BY id DESC`;
-        const backupResult = await pool.query(backupQuery, backupParams);
-        return res.json(backupResult.rows);
-      } catch (backupErr) {
-        return res.status(500).json({ message: 'Критическая ошибка базы данных', error: backupErr.message });
-      }
-    }
-
     res.status(500).json({ message: 'Ошибка сервера при поиске объектов', error: err.message });
   }
 };
-

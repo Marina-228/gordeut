@@ -3,9 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 // ИСПРАВЛЕНО: Точный импорт Placemark без опечаток
 import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'; 
 import API from '../api/axios';
+import { useAuth } from '../context/AuthContext'; // Импортируйте ваш хук
+
 
 export default function Search() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Получаем пользователя из контекста
 
   // Состояния для фильтров поиска
   const [city, setCity] = useState('');
@@ -213,13 +216,13 @@ export default function Search() {
        {/* --- РАСТЯНУТАЯ СЕТКА ДОМИКОВ --- */}
 <div style={{ 
   display: 'grid', 
-  /* "1fr 1fr 1fr" принудительно делит пространство на 3 равные части во всю ширину */
   gridTemplateColumns: 'repeat(3, 1fr)', 
   gap: '20px', 
   marginTop: '20px',
-  width: '100%' // Гарантирует, что сетка займет 100% ширины родителя
+  width: '100%' 
 }}>
-  {cottages.map((cottage) => (
+  {/* ИСПРАВЛЕНО: используем filteredCottages вместо cottages */}
+  {filteredCottages.map((cottage) => (
     <div key={cottage.id} style={{
       background: '#fff',
       borderRadius: '20px',
@@ -228,9 +231,7 @@ export default function Search() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      textAlign: 'center',
-      /* Убеждаемся, что карточка не сжимается меньше нужного */
-      minWidth: '0' 
+      textAlign: 'center'
     }}>
       <img 
         src={cottage.media_urls?.[0] || 'default.jpg'} 
@@ -239,7 +240,6 @@ export default function Search() {
       />
       <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{cottage.name}</h3>
       <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '16px' }}>{cottage.rooms || '1'}-комнатный дом</p>
-      <p style={{ margin: '0 0 15px 0', color: '#999', fontSize: '14px' }}>{cottage.region}, {cottage.city}</p>
       
       <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#598850', marginBottom: '15px' }}>
         {cottage.price_per_night} BYN
@@ -248,13 +248,18 @@ export default function Search() {
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
         <Link to={`/cottage/${cottage.id}`} style={{
           padding: '12px', border: '1px solid #598850', color: '#598850', 
-          borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: '15px'
+          borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold'
         }}>Подробнее</Link>
         
-        <button onClick={() => handleDelete(cottage.id)} style={{
-          padding: '12px', border: '1px solid #d9534f', color: '#d9534f',
-          borderRadius: '10px', background: 'transparent', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px'
-        }}>Удалить объект</button>
+        {/* ИСПРАВЛЕНО: вызываем корректное имя функции */}
+        {user?.role === 'admin' && (
+          <button onClick={() => handleDeleteCottage(cottage.id)} style={{
+            padding: '12px', border: '1px solid #d9534f', color: '#d9534f',
+            borderRadius: '10px', background: 'transparent', cursor: 'pointer', fontWeight: 'bold'
+          }}>
+            Удалить объект
+          </button>
+        )}
       </div>
     </div>
   ))}

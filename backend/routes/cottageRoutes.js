@@ -12,6 +12,8 @@ import { isAdmin } from '../middleware/adminMiddleware.js';
 
 const router = express.Router();
 
+router.get('/search', searchCottages);
+
 // Публичные маршруты (доступны всем пользователям и гостям)
 router.get('/', getCottages);
 

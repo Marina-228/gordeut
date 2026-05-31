@@ -1,10 +1,12 @@
 import express from 'express';
-import { createBooking } from '../controllers/bookingController.js';
-import { protect } from '../middleware/authMiddleware.js'; // Наш пограничник
+// ИМПОРТИРУЕМ ВСЕ 3 ФУНКЦИИ
+import { createBooking, getMyBookings, cancelBooking } from '../controllers/bookingController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Маршрут защищен! Сначала сработает protect, и только если токен ок — выполнится createBooking
 router.post('/', protect, createBooking);
+router.get('/my', protect, getMyBookings);
+router.patch('/:id/cancel', protect, cancelBooking); // ТЕПЕРЬ ОНА БУДЕТ ВИДНА!
 
 export default router;

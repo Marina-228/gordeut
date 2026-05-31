@@ -238,3 +238,4 @@ export const searchCottages = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера при поиске объектов', error: err.message });
   }
 };
+

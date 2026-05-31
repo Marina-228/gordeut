@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Search from './pages/HomeSearch';
 import AddCottage from './pages/AddCottage';
 
+import MyBookings from './pages/MyBookings';
 // 1. Импортируем провайдер
 import { AuthProvider } from './context/AuthContext'; 
 import { CottageProvider } from './context/CottageContext';
@@ -48,6 +49,7 @@ export default function App() {
               overflowY: 'auto'
             }}>
               <Routes>
+                <Route path="/my-bookings" element={<MyBookings />} />
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />

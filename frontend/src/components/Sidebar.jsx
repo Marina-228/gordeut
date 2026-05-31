@@ -74,12 +74,14 @@ export default function Sidebar() {
         <NavLink to="/" style={getLinkStyle}>🏠 Обзор</NavLink>
         <NavLink to="/search" style={getLinkStyle}>🔍 Поиск домов</NavLink>
         
-        {/* Проверка роли теперь использует реактивный объект user */}
+        {/* Проверка роли */}
         {isAuth && user.role === 'admin' && (
           <NavLink to="/add-cottage" style={getLinkStyle}>➕ Добавить дом</NavLink>
         )}
         
-        {isAuth && <NavLink to="/profile" style={getLinkStyle}>📅 Мои бронирования</NavLink>}
+        {/* ИЗМЕНЕНО: теперь ведет на правильный роут /my-bookings */}
+        {isAuth && <NavLink to="/my-bookings" style={getLinkStyle}>📅 Мои бронирования</NavLink>}
+        
         <NavLink to="/settings" style={getLinkStyle}>⚙️ Настройки</NavLink>
       </nav>
     </div>

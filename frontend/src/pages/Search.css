@@ -1,0 +1,28 @@
+.cottage-grid {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* На ПК: 3 карточки */
+@media (min-width: 1024px) {
+  .cottage-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* На мобильных: 1 карточка */
+@media (max-width: 1023px) {
+  .cottage-grid { grid-template-columns: 1fr; }
+}
+
+.cottage-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid #eee; /* Тонкая граница как на фото */
+}

@@ -7,32 +7,43 @@ import Home from './pages/Home';
 import Register from './pages/Register';
 import CottageDetails from './pages/CottageDetail';
 import Search from './pages/HomeSearch';
-import AddCottage from "./pages/AddCottage"; // Оставляем только этот, если он существует
+import AddCottage from "./pages/AddCottage";
 import Profile from './pages/Profile';
+import Settings from './pages/Settings'; // Импортируем страницу настроек
 
 import { AuthProvider } from './context/AuthContext'; 
 import { CottageProvider } from './context/CottageContext';
 import './calendar.css';
-// ... ваши импорты
 
 export default function App() {
   return (
     <AuthProvider>
       <CottageProvider> 
         <Router>
-          <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', background: '#fff' }}>
+          <div style={{ 
+            display: 'flex', 
+            width: '100vw', 
+            height: '100vh', 
+            overflow: 'hidden', 
+            background: '#fff' 
+          }}>
             <Sidebar />
             
-            <main style={{ flexGrow: 1, height: '100%', overflowY: 'auto', background: '#f9f9f9' }}>
+            <main style={{ 
+              flexGrow: 1, 
+              height: '100%', 
+              overflowY: 'auto', 
+              background: '#f9f9f9' 
+            }}>
               <Routes>
-                {/* Публичные */}
+                {/* Публичные маршруты */}
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/cottage/:id" element={<CottageDetails />} />
                 <Route path="/search" element={<Search />} />
                 
-                {/* Приватные */}
+                {/* Приватные маршруты */}
                 <Route path="/my-bookings" element={
                   <ProtectedRoute><MyBookings /></ProtectedRoute>
                 } />
@@ -42,8 +53,12 @@ export default function App() {
                 <Route path="/profile" element={
                   <ProtectedRoute><Profile /></ProtectedRoute>
                 } />
+                {/* Добавляем настройки в приватные маршруты */}
+                <Route path="/settings" element={
+                  <ProtectedRoute><Settings /></ProtectedRoute>
+                } />
                 
-                {/* Редирект на главную, если путь не найден */}
+                {/* Редирект на главную при ошибке пути */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

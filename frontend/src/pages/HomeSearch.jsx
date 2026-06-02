@@ -95,6 +95,14 @@ export default function Search() {
     }
   };
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     /* ИСПРАВЛЕНО: Убрали жесткий overflow: hidden. Теперь страница плавно скроллится вниз, если домиков много */
     <div style={{ 
@@ -214,20 +222,21 @@ export default function Search() {
         </h3>
         
        {/* --- РАСТЯНУТАЯ СЕТКА ДОМИКОВ --- */}
-<div style={{ 
-  display: 'grid', 
-  gridTemplateColumns: 'repeat(3, 1fr)', 
-  gap: '20px', 
+{/* --- СЕТКА ДОМИКОВ: используем класс вместо инлайн-стилей --- */}
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: window.innerWidth > 768 ? 'repeat(3, 1fr)' : '1fr',
+  gap: '20px',
   marginTop: '20px',
-  width: '100%' 
+  width: '100%'
 }}>
-  {/* ИСПРАВЛЕНО: используем filteredCottages вместо cottages */}
   {filteredCottages.map((cottage) => (
     <div key={cottage.id} style={{
       background: '#fff',
       borderRadius: '20px',
       padding: '20px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      border: '1px solid #eee',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -238,29 +247,35 @@ export default function Search() {
         style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '15px', marginBottom: '15px' }}
         alt={cottage.name}
       />
-      <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{cottage.name}</h3>
-      <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '16px' }}>{cottage.rooms || '1'}-комнатный дом</p>
       
-      <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#598850', marginBottom: '15px' }}>
+      <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold' }}>{cottage.name}</h3>
+      <p style={{ margin: '0 0 5px 0', color: '#555', fontSize: '15px' }}>{cottage.rooms || '1'} - комнатный дом</p>
+      <p style={{ margin: '0 0 15px 0', color: '#999', fontSize: '14px', fontStyle: 'italic' }}>{cottage.region}, {cottage.city}</p>
+      
+      <hr style={{ width: '80%', border: '0', borderTop: '1px solid #eee', marginBottom: '15px' }} />
+
+      <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#598850', marginBottom: '15px' }}>
         {cottage.price_per_night} BYN
       </div>
 
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
-        <Link to={`/cottage/${cottage.id}`} style={{
-          padding: '12px', border: '1px solid #598850', color: '#598850', 
-          borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold'
-        }}>Подробнее</Link>
-        
-        {/* ИСПРАВЛЕНО: вызываем корректное имя функции */}
-        {user?.role === 'admin' && (
-          <button onClick={() => handleDeleteCottage(cottage.id)} style={{
-            padding: '12px', border: '1px solid #d9534f', color: '#d9534f',
-            borderRadius: '10px', background: 'transparent', cursor: 'pointer', fontWeight: 'bold'
-          }}>
-            Удалить объект
-          </button>
-        )}
-      </div>
+  <Link to={`/cottage/${cottage.id}`} style={{
+    padding: '10px', border: '1px solid #598850', color: '#598850', 
+    borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold', textAlign: 'center'
+  }}>Подробнее</Link>
+  
+  {/* Убрали проверку user?.role === 'admin', оставили только проверку на наличие юзера */}
+  {user ? (
+    <button onClick={() => handleDeleteCottage(cottage.id)} style={{
+      padding: '10px', border: '1px solid #d9534f', color: '#d9534f',
+      borderRadius: '10px', background: 'transparent', cursor: 'pointer', fontWeight: 'bold'
+    }}>
+      Удалить объект
+    </button>
+  ) : (
+    <div style={{ fontSize: '10px', color: '#ccc' }}>Админ-панель скрыта</div>
+  )}
+</div>
     </div>
   ))}
 </div>

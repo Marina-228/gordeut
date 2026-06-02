@@ -10,3 +10,12 @@ html, body {
   width: 100%;
   height: 100%;
 }
+
+@media (max-width: 768px) {
+  .preview-card {
+    display: none !important;
+  }
+  .wizard-container {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -3,6 +3,21 @@ import { CottageContext } from '../context/CottageContext'; // Укажите п
 import Cropper from 'react-easy-crop';
 
 const styles = {
+
+  previewCard: { 
+    background: '#fff', 
+    padding: '20px', 
+    borderRadius: '20px', 
+    boxShadow: '0 8px 30px rgba(0,0,0,0.06)', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    height: 'fit-content',
+    position: 'sticky', 
+    top: '40px', 
+    border: '1px solid #eee', 
+    alignItems: 'center'
+  },
+
   pageWrapper: { 
     display: 'flex', justifyContent: 'center', alignItems: 'flex-start', 
     minHeight: '100vh', padding: '60px 20px', background: '#f9f9f9',
@@ -113,6 +128,16 @@ export default function AddCottageWizard() {
     region: '', city: '', address: '', description: '', price: '' 
   });
   const [errors, setErrors] = useState({});
+
+  // 1. Добавляем состояние для отслеживания мобильной версии
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [files, setFiles] = useState([]);
 
   useEffect(() => {
@@ -186,6 +211,7 @@ export default function AddCottageWizard() {
 
   return (
     <div style={styles.pageWrapper}>
+      
       <div style={styles.container}>
         <div style={styles.card}>
           <h2>{step === 1 ? 'Основная информация' : step === 2 ? 'Расположение' : step === 3 ? 'Описание и цена' : 'Фото'}</h2>
@@ -389,7 +415,7 @@ export default function AddCottageWizard() {
 )}
             </div>
     </div>
-
+{!isMobile && (
 <div style={{ ...styles.card, position: 'sticky', top: '40px', border: '1px solid #eee', padding: '20px', alignItems: 'center' }}>
   <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#333', textAlign: 'center' }}>Предпросмотр</h3>
   
@@ -443,6 +469,7 @@ export default function AddCottageWizard() {
     </strong>
   </div>
 </div>
+)}
       </div>
     </div>
   );

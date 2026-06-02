@@ -1,32 +1,58 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import axios from 'axios';
 
 export const AuthContext = createContext();
 
+const apiClient = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+// Интерцептор: добавляет токен в каждый запрос автоматически
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token && token !== 'undefined' && token !== 'null') {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Чтобы дождаться проверки токена
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || token === 'undefined' || token === 'null') {
+      setLoading(false);
+      return;
+    }
+    try {
+      const res = await apiClient.get('/auth/profile');
+      setUser(res.data);
+    } catch (err) {
+      console.error("Ошибка проверки токена:", err);
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Проверяем наличие токена при старте приложения
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    fetchProfile();
   }, []);
 
   const login = (userData, token) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    window.location.href = '/login'; // Принудительный редирект
   };
 
   return (
@@ -36,5 +62,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Хук для удобного использования контекста в других компонентах
 export const useAuth = () => useContext(AuthContext);

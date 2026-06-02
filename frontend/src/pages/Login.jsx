@@ -144,14 +144,11 @@ export default function Login() {
     try {
       // 1. Отправляем запрос на сервер
       const response = await API.post('/auth/login', { email, password });
-      
-      // 2. Сохраняем токен в localStorage
-      localStorage.setItem('token', response.data.token);
-      
-      // 3. Вызываем функцию login из AuthContext
+
+      // 2. Вызываем функцию login из AuthContext
       // Это действие обновит глобальное состояние, 
       // и Sidebar автоматически покажет кнопку "Профиль"
-      login(response.data.user);
+      login(response.data.user, response.data.token); // было вот так)
 
       // 4. Логика "Запомнить меня"
       if (rememberMe) {
@@ -339,3 +336,5 @@ export default function Login() {
     </div>
   );
 }
+
+//мне этот токен надоел 😡 зьюка)

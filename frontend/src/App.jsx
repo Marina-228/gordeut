@@ -13,56 +13,40 @@ import Profile from './pages/Profile';
 import { AuthProvider } from './context/AuthContext'; 
 import { CottageProvider } from './context/CottageContext';
 import './calendar.css';
-export default function App() {
-  const globalStyles = {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  };
+// ... ваши импорты
 
+export default function App() {
   return (
     <AuthProvider>
       <CottageProvider> 
         <Router>
-          <div style={{ 
-            ...globalStyles,
-            display: 'flex', 
-            width: '100vw',       
-            height: '100vh',      
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-            background: '#fff'
-          }}>
+          <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', background: '#fff' }}>
             <Sidebar />
             
-            <div style={{ 
-              flexGrow: 1,          
-              height: '100%',       
-              display: 'flex',      
-              flexDirection: 'column',
-              background: '#f9f9f9',
-              boxSizing: 'border-box',
-              overflowY: 'auto'
-            }}>
+            <main style={{ flexGrow: 1, height: '100%', overflowY: 'auto', background: '#f9f9f9' }}>
               <Routes>
-                {/* Публичные маршруты */}
+                {/* Публичные */}
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/cottage/:id" element={<CottageDetails />} />
                 <Route path="/search" element={<Search />} />
                 
-                {/* Приватные маршруты (оборачиваем в ProtectedRoute) */}
+                {/* Приватные */}
                 <Route path="/my-bookings" element={
                   <ProtectedRoute><MyBookings /></ProtectedRoute>
                 } />
                 <Route path="/add-cottage" element={
                   <ProtectedRoute><AddCottage /></ProtectedRoute>
                 } />
-                
                 <Route path="/profile" element={
                   <ProtectedRoute><Profile /></ProtectedRoute>
                 } />
+                
+                {/* Редирект на главную, если путь не найден */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </div>
+            </main>
           </div>
         </Router>
       </CottageProvider>

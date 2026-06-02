@@ -3,6 +3,17 @@ import pool from '../db.js';
 // 1. Получение всех домиков
 export const getCottages = async (req, res) => {
   try {
+    // 1. Считываем параметры из запроса (по умолчанию 1 страница, 3 элемента)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 3;
+    const offset = (page - 1) * limit;
+
+    // 2. Узнаем общее количество коттеджей (нужно для фронтенда, чтобы понимать сколько всего страниц)
+    const countResult = await pool.query('SELECT COUNT(*) FROM cottages');
+    const totalItems = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // 3. Добавляем LIMIT и OFFSET в существующий SQL-запрос
     const result = await pool.query(`
       SELECT 
         id, 
@@ -19,8 +30,17 @@ export const getCottages = async (req, res) => {
         media_urls 
       FROM cottages 
       ORDER BY id DESC
-    `);
-    res.json(result.rows);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]); // Передаем параметры для пагинации
+
+    // 4. Возвращаем объект с данными и мета-информацией о страницах
+    res.json({
+      data: result.rows,
+      currentPage: page,
+      totalPages: totalPages,
+      totalItems: totalItems
+    });
+
   } catch (err) {
     console.error('Ошибка при загрузке домиков:', err);
     res.status(500).json({ message: 'Ошибка при загрузке домиков', error: err.message });

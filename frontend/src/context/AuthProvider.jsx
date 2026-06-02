@@ -1,12 +1,6 @@
-import { useState } from 'react';
-import { AuthContext } from './AuthContext'; // Импортируем контекст
-import { AuthProvider } from './context/AuthContext';
+import { createContext, useState, useContext } from 'react';
 
-root.render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>
-);
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -26,11 +20,14 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token'); // Не забывайте удалять токен
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

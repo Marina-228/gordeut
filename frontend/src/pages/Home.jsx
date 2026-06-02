@@ -8,31 +8,52 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Состояния для пагинации
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Получаем данные текущего пользователя, чтобы узнать его роль
   const currentUser = JSON.parse(localStorage.getItem('user')) || null;
   const isAdmin = currentUser?.role === 'admin';
 
+  // Выносим запрос в отдельную функцию, чтобы её можно было вызывать и при загрузке, и после удаления
+  const fetchCottages = async (page) => {
+    setLoading(true);
+    try {
+      // Отправляем запрос с указанием нужной страницы (лимит 3)
+      const response = await API.get(`/cottages?page=${page}&limit=3`);
+      
+      // Поддерживаем как новый формат (с пагинацией), так и старый (если бэкенд еще не обновлен)
+      const data = response.data.data || response.data;
+      setCottages(data);
+      setTotalPages(response.data.totalPages || 1);
+    } catch (err) {
+      console.error("Ошибка при загрузке домиков:", err);
+      const serverDetail = err.response?.data?.error || err.response?.data?.message || err.message;
+      alert(`Ошибка БД на бэкенде: ${serverDetail}`);
+      setError(`Не удалось загрузить каталог домиков. Причина: ${serverDetail}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Запрашиваем данные при первой загрузке и при смене страницы
   useEffect(() => {
-    const fetchCottages = async () => {
-      try {
-        const response = await API.get('/cottages');
-        setCottages(response.data);
-      } catch (err) {
-        console.error("Ошибка при загрузке домиков:", err);
-        
-        // Достаем точное текстовое описание ошибки из бэкенда (из err.response)
-        const serverDetail = err.response?.data?.error || err.response?.data?.message || err.message;
-        
-        // Показываем громкое уведомление разработчику
-        alert(`Ошибка БД на бэкенде: ${serverDetail}`);
-        
-        setError(`Не удалось загрузить каталог домиков. Причина: ${serverDetail}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCottages();
-  }, []);
+    fetchCottages(currentPage);
+  }, [currentPage]);
+
+  // Функции переключения страниц
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
 
   // Функция удаления карточки домика
   const handleDelete = async (id, name) => {
@@ -47,17 +68,16 @@ export default function Home() {
         return;
       }
 
-      // Делаем запрос через axios
       const response = await API.delete(`/cottages/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}` 
         }
       });
 
-      // Если сервер вернул success
       if (response.data.success) {
-        setCottages(prev => prev.filter(cottage => cottage.id !== id));
         alert('Объявление успешно удалено!');
+        // Перезапрашиваем данные текущей страницы, чтобы обновить список и подтянуть следующий домик
+        fetchCottages(currentPage);
       } else {
         alert(`Не удалось удалить: ${response.data.message}`);
       }
@@ -69,7 +89,7 @@ export default function Home() {
     }
   };
 
-  if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>⏳ Загрузка уютных домиков...</div>;
+  if (loading && cottages.length === 0) return <div style={{ padding: '20px', textAlign: 'center' }}>⏳ Загрузка уютных домиков...</div>;
   if (error) return <div style={{ padding: '20px', color: '#e74c3c', textAlign: 'center' }}>⚠️ {error}</div>;
 
   return (
@@ -122,7 +142,7 @@ export default function Home() {
               background: '#fff',
               padding: '20px', 
               alignItems: 'center', 
-              justify: 'space-between',
+              justifyContent: 'space-between',
               position: 'relative'
             }}
           >
@@ -138,7 +158,7 @@ export default function Home() {
                 marginBottom: '15px',
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'center',
+                justifyContent: 'center',
                 overflow: 'hidden'
               }}>
                 {cottage.media_urls?.[0] ? (
@@ -245,10 +265,70 @@ export default function Home() {
               )}
 
             </div>
-
           </div>
         ))}
       </div>
+
+      {/* --- БЛОК ПАГИНАЦИИ --- */}
+      {totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: '20px', 
+          marginTop: '40px',
+          paddingBottom: '20px'
+        }}>
+          <button 
+            onClick={handlePrevPage} 
+            disabled={currentPage === 1 || loading}
+            style={{
+              padding: '12px 24px',
+              cursor: (currentPage === 1 || loading) ? 'not-allowed' : 'pointer',
+              background: (currentPage === 1 || loading) ? '#e0e0e0' : '#7a9cb2',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => { if (currentPage !== 1 && !loading) e.target.style.background = '#65889e' }}
+            onMouseOut={(e) => { if (currentPage !== 1 && !loading) e.target.style.background = '#7a9cb2' }}
+          >
+            ← Назад
+          </button>
+
+          <span style={{ 
+            fontWeight: 'bold', 
+            fontSize: '16px', 
+            color: '#555',
+            minWidth: '120px',
+            textAlign: 'center'
+          }}>
+            Страница {currentPage} из {totalPages}
+          </span>
+
+          <button 
+            onClick={handleNextPage} 
+            disabled={currentPage === totalPages || loading}
+            style={{
+              padding: '12px 24px',
+              cursor: (currentPage === totalPages || loading) ? 'not-allowed' : 'pointer',
+              background: (currentPage === totalPages || loading) ? '#e0e0e0' : '#7a9cb2',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 'bold',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => { if (currentPage !== totalPages && !loading) e.target.style.background = '#65889e' }}
+            onMouseOut={(e) => { if (currentPage !== totalPages && !loading) e.target.style.background = '#7a9cb2' }}
+          >
+            Вперед →
+          </button>
+        </div>
+      )}
+      
     </div>
   );
 }

@@ -1,14 +1,13 @@
 import { useContext } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext'; // Импортируем ваш контекст
+import { AuthContext } from '../context/AuthContext'; 
 import logo from '../assets/logo.png'; 
 
 export default function Sidebar() {
-  // Теперь берем данные не из localStorage, а из React Context
-  const { user } = useContext(AuthContext); 
-  const isAuth = !!user; // Если объект user существует, значит мы авторизованы
+  // Добавляем loading, чтобы правильно обрабатывать состояние проверки токена
+  const { user, loading } = useContext(AuthContext); 
+  const isAuth = !!user;
 
-  // Стили для активной ссылки
   const getLinkStyle = ({ isActive }) => ({
     textDecoration: 'none',
     color: isActive ? 'rgb(123, 171, 125)' : '#333',
@@ -39,15 +38,17 @@ export default function Sidebar() {
         </h2>
       </div>
 
-      {/* Блок пользователя */}
-      {isAuth ? (
+      {/* Блок пользователя с обработкой состояния загрузки */}
+      {loading ? (
+        <div style={{ padding: '10px 0', fontSize: '14px', color: '#888' }}>Загрузка...</div>
+      ) : isAuth ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0' }}>
           <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: 'rgb(123, 171, 125)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '18px' }}>
-            {user.name ? user.name[0].toUpperCase() : 'U'}
+            {user?.name ? user.name[0].toUpperCase() : 'U'}
           </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user.name || 'Пользователь'}
+              {user?.name || 'Пользователь'}
             </div>
             <Link to="/profile" style={{ fontSize: '12px', color: '#7a9cb2', textDecoration: 'none' }}>Личный кабинет</Link>
           </div>
@@ -75,11 +76,10 @@ export default function Sidebar() {
         <NavLink to="/search" style={getLinkStyle}>🔍 Поиск домов</NavLink>
         
         {/* Проверка роли */}
-        {isAuth && user.role === 'admin' && (
+        {isAuth && user?.role === 'admin' && (
           <NavLink to="/add-cottage" style={getLinkStyle}>➕ Добавить дом</NavLink>
         )}
         
-        {/* ИЗМЕНЕНО: теперь ведет на правильный роут /my-bookings */}
         {isAuth && <NavLink to="/my-bookings" style={getLinkStyle}>📅 Мои бронирования</NavLink>}
         
         <NavLink to="/settings" style={getLinkStyle}>⚙️ Настройки</NavLink>

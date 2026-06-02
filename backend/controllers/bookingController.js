@@ -86,7 +86,7 @@ export const cancelBooking = async (req, res) => {
   try {
     const result = await pool.query(
       'UPDATE bookings SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
-      ['cancelled', id, userId]
+      ['pending', id, userId]
     );
 
     if (result.rowCount === 0) {

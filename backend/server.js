@@ -9,13 +9,12 @@ import bookingRoutes from './routes/bookingRoutes.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+
 app.use(cors({ 
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], 
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://ВАШ-ДОМЕН-НА-VERCEL.app'], 
     credentials: true 
 }));
 
-// ИСПРАВЛЕНО: Увеличили лимит, чтобы сервер не ругался на «Payload Too Large» при загрузке фото
 app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -28,12 +27,8 @@ app.use('/api/cottages', cottageRoutes);
 app.use('/api/bookings', bookingRoutes);
 
 app.get('/', (req, res) => {
-    res.json({ message: "Добро пожаловать в API сети коттеджей «Гордеют»! Сервер успешно запущен. 🚀" });
+    res.json({ message: "API сети коттеджей «Гордеют» работает!" });
 });
 
-app.listen(PORT, () => {
-    console.log(`=========================================`);
-    console.log(` Server is running on port ${PORT}`);
-    console.log(` URL: http://localhost:${PORT}`);
-    console.log(`=========================================`);
-});
+// ДЛЯ VERCEL: не используем app.listen, экспортируем app как модуль
+export default app;

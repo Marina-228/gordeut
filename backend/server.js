@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({ 
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://vercel.com/marina-s-projects12/gordeut-yrod/HDpLmj8TqEP5F9YDQL1FnQbyTsC8'], 
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://vercel.com/marina-s-projects12/gordeut-yrod/HDpLmj8TqEP5F9YDQL1FnQbyTsC8', 'https://pretty-heart-production-b701.up.railway.app'], 
     credentials: true 
 }));
 

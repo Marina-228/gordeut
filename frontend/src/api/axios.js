@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({ 
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'gordeut-svye-daku2g2wg-marina-s-projects12.vercel.app',
   withCredentials: true
 });
 

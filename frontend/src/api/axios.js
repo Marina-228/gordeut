@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({ 
-  baseURL: 'gordeut-svye-daku2g2wg-marina-s-projects12.vercel.app',
+  baseURL: 'https://vercel.com/marina-s-projects12/gordeut-rzle/CbQPmBH5bpeyxSzpNxWmYorc8hPC',
   withCredentials: true
 });
 

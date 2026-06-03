@@ -10,29 +10,15 @@ dotenv.config();
 
 const app = express();
 
-// Исправленный список разрешенных доменов
-const allowedOrigins = [
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173', 
-    'https://gordeut-fexs-70dxocqn5-marina-s-projects12.vercel.app' 
-];
-
 app.use(cors({ 
-    origin: (origin, callback) => {
-        // Разрешаем запросы без origin (например, через Postman) или если origin в списке
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://ВАШ-ДОМЕН-НА-VERCEL.app'], 
     credentials: true 
 }));
 
 app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Подключение к БД
+// Подключение к базе данных
 connectDB();
 
 // Маршруты API
@@ -44,4 +30,5 @@ app.get('/', (req, res) => {
     res.json({ message: "API сети коттеджей «Гордеют» работает!" });
 });
 
+// ДЛЯ VERCEL: не используем app.listen, экспортируем app как модуль
 export default app;

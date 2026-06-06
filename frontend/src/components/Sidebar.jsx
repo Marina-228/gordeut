@@ -42,7 +42,7 @@ export default function Sidebar() {
         className="mobile-toggle-btn"
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          position: 'fixed',
+          position: 'relative',
           top: '16px',
           left: '16px',
           zIndex: 10000,
@@ -65,21 +65,22 @@ export default function Sidebar() {
 
       {/* Задний полупрозрачный фон при открытом меню на мобилках */}
       {isOpen && (
-        <div 
-          className="mobile-overlay"
-          onClick={() => setIsOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(3px)',
-            zIndex: 9998,
-          }}
-        />
-      )}
+          <div 
+            className="mobile-overlay"
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: 'fixed', // Заменили с relative
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(3px)',
+              zIndex: 9998,
+            }}
+          />
+        )}
+
 
       {/* Основной контейнер сайдбара */}
       <div 
@@ -95,57 +96,47 @@ export default function Sidebar() {
       >
         {/* Адаптивные стили и медиа-запросы */}
         <style>{`
-          /* Стили для компьютеров */
-          @media (min-width: 769px) {
-            .mobile-toggle-btn, .mobile-overlay {
-              display: none !important; /* На ПК кнопки управления скрыты */
-            }
-            .sidebar-container {
-              width: 280px;
-              height: 100vh;
-              border-right: 1px solid #e5e7eb;
-              position: fixed;
-              left: 0;
-              top: 0;
-              transform: none !important;
-            }
-            .nav-menu a:hover {
-              background-color: #f3f4f6 !important;
-              color: #111827 !important;
-              transform: translateX(6px);
-            }
-            .nav-menu a.active:hover {
-              background-color: #eff6ff !important;
-              color: #2563eb !important;
-            }
-          }
+  /* Стили для компьютеров (фиксированный сайдбар) */
+  @media (min-width: 769px) {
+    .mobile-toggle-btn, .mobile-overlay { display: none !important; }
+    .sidebar-container {
+      width: 280px;
+      height: 100vh;
+      border-right: 1px solid #e5e7eb;
+      position: sticky; /* Идеально для боковой панели */
+      top: 0;
+      flex-shrink: 0;
+    }
+  }
 
-          /* Стили для мобильных устройств (Выдвижной режим) */
-          @media (max-width: 768px) {
-            .sidebar-container {
-              position: fixed;
-              top: 0;
-              left: 0;
-              width: 280px;
-              height: 100vh;
-              z-index: 9999;
-              border-right: 1px solid #e5e7eb;
-              box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
-              padding-top: 80px; /* Отступ сверху, чтобы не перекрывать кнопку-крестик */
-              transform: translateX(-100%); /* По умолчанию спрятан за левым экраном */
-            }
-            /* Класс активации анимации выезда */
-            .sidebar-container.mobile-open {
-              transform: translateX(0) !important;
-            }
-          }
-          
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+  /* Стили для мобильных (выдвижной режим) */
+  @media (max-width: 768px) {
+    .sidebar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 280px;
+      height: 100vh;
+      z-index: 9999;
+      background: white;
+      border-right: 1px solid #e5e7eb;
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+      padding-top: 20px;
+      transform: translateX(-100%);
+      /* Добавляем плавность */
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .sidebar-container.mobile-open {
+      transform: translateX(0);
+    }
 
+    /* Чтобы контент не "прятался" под кнопку гамбургера */
+    .mobile-toggle-btn {
+      position: fixed !important;
+    }
+  }
+`}</style>
         {/* Шапка с вашей личной иконкой */}
         <div className="logo-section" style={{ padding: '28px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img 

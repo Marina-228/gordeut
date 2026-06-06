@@ -4,9 +4,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'; 
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext'; // Импортируйте ваш хук
-
+import Notification from '../components/Notification'; // Убедитесь, что путь верный
 
 export default function Search() {
+  const [notification, setNotification] = useState({ message: null, isSuccess: false });
   const navigate = useNavigate();
   const { user } = useAuth(); // Получаем пользователя из контекста
 
@@ -63,10 +64,10 @@ export default function Search() {
         const end = new Date(endDate);
 
         if (start >= end) {
-          alert('Дата выезда должна быть позже даты заезда!');
-          setLoading(false);
-          return;
-        }
+    setNotification({ message: 'Дата выезда должна быть позже даты заезда!', isSuccess: false });
+    setLoading(false);
+    return;
+  }
         params.start_date = startDate;
         params.end_date = endDate;
       }
@@ -87,11 +88,11 @@ export default function Search() {
     if (!window.confirm('Вы уверены, что хотите удалить этот объект?')) return;
     try {
       await API.delete(`/cottages/${id}`);
-      alert('Объект успешно удален');
+      setNotification({ message: 'Объект успешно удален', isSuccess: true });
       setFilteredCottages(prev => prev.filter(c => c.id !== id));
     } catch (err) {
       console.error('Ошибка при удалении домика:', err);
-      alert('Не удалось удалить объект');
+      setNotification({ message: 'Не удалось удалить объект', isSuccess: false });
     }
   };
 
@@ -104,6 +105,7 @@ export default function Search() {
   }, []);
 
   return (
+    
     /* ИСПРАВЛЕНО: Убрали жесткий overflow: hidden. Теперь страница плавно скроллится вниз, если домиков много */
     <div style={{ 
       padding: '15px', 
@@ -113,6 +115,15 @@ export default function Search() {
       background: '#f9f9f9',
       minHeight: '100vh'
     }}>
+      {notification.message && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999 }}>
+          <Notification 
+            message={notification.message} 
+            isSuccess={notification.isSuccess} 
+            onClose={() => setNotification({ message: null, isSuccess: false })} 
+          />
+        </div>
+      )}
       
       <h1 style={{ color: '#222', fontSize: '22px', margin: '0 0 15px 0', textAlign: 'center' }}>
         Поиск уютного отдыха

@@ -4,13 +4,14 @@ import API from '../api/axios';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { ru } from 'date-fns/locale'; 
+import Notification from '../components/Notification'; // Убедитесь, что путь верный
 
 registerLocale('ru', ru);
 
-
 export default function CottageDetails() {
+  // --- НОВЫЕ СОСТОЯНИЯ ---
+  const [notification, setNotification] = useState({ message: null, isSuccess: false });
 
-  // 1. ВСТАВЬТЕ ЭТОТ БЛОК ПРЯМО ЗДЕСЬ
   const calendarStyles = (
     <style>{`
       .custom-calendar .react-datepicker__day--disabled {
@@ -28,8 +29,8 @@ export default function CottageDetails() {
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [bookedDates, setBookedDates] = useState([]);
 
-  // Вспомогательные функции для ручного ввода
   const formatDateForInput = (date) => (date ? date.toISOString().split('T')[0] : '');
   
   const handleManualDateChange = (val, type) => {
@@ -54,24 +55,20 @@ export default function CottageDetails() {
   };
 
   const handleBooking = async () => {
-    // 1. Проверка авторизации
     const token = localStorage.getItem('token');
     if (!token) {
-        alert("⚠️ Пожалуйста, войдите в систему для бронирования!");
-        navigate('/login');
-        return;
-    }
-
-    // 2. Более строгая проверка дат
-    if (!startDate || !endDate) {
-      alert("⚠️ Пожалуйста, выберите корректный диапазон дат!");
+      setNotification({ message: "Пожалуйста, войдите в систему!", isSuccess: false });
+      setTimeout(() => navigate('/login'), 1500);
       return;
     }
 
-    // НОВАЯ ПРОВЕРКА: Проверка пересечения с занятыми датами
+    if (!startDate || !endDate) {
+      setNotification({ message: "Выберите диапазон дат!", isSuccess: false });
+      return;
+    }
+
     if (startDate && endDate) {
       const isOverlapping = bookedDates.some(busyDate => {
-        // Приводим к формату без времени для сравнения
         const bDate = new Date(busyDate).setHours(0,0,0,0);
         const start = new Date(startDate).setHours(0,0,0,0);
         const end = new Date(endDate).setHours(0,0,0,0);
@@ -79,82 +76,61 @@ export default function CottageDetails() {
       });
 
       if (isOverlapping) {
-        alert("❌ Выбранные даты пересекаются с уже забронированными!");
+        setNotification({ message: "Даты заняты!", isSuccess: false });
         return;
       }
     }
 
-    // 3. Безопасное форматирование с проверкой типа
-    const formatDate = (date) => {
-      if (!(date instanceof Date) || isNaN(date)) return null;
-      return date.toISOString().split('T')[0];
-    };
-
+    const formatDate = (date) => (date instanceof Date && !isNaN(date)) ? date.toISOString().split('T')[0] : null;
     const check_in_date = formatDate(startDate);
     const check_out_date = formatDate(endDate);
 
-    if (!check_in_date || !check_out_date) {
-        alert("⚠️ Ошибка формата дат!");
-        return;
-    }
-
-    const bookingData = {
-      cottage_id: parseInt(id),
-      check_in_date,    // убедитесь, что на бэкенде в req.body именно эти ключи
-      check_out_date
-    };
-
-    console.log("Отправка данных на сервер:", bookingData); // ДЛЯ ОТЛАДКИ
-
     try {
-      await API.post('/bookings', bookingData);
-      alert("✅ Бронирование успешно создано!");
-      navigate('/my-bookings');
+      await API.post('/bookings', { cottage_id: parseInt(id), check_in_date, check_out_date });
+      setNotification({ message: "Бронирование успешно!", isSuccess: true });
+      setTimeout(() => navigate('/my-bookings'), 1500);
     } catch (err) {
-      console.error("Полная ошибка от сервера:", err.response);
-      const errorMessage = err.response?.data?.message || "Не удалось отправить данные";
-      alert("❌ Ошибка: " + errorMessage);
+      setNotification({ message: err.response?.data?.message || "Ошибка бронирования", isSuccess: false });
     }
   };
 
-  const [bookedDates, setBookedDates] = useState([]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const cottageRes = await API.get(`/cottages/${id}`);
+        setCottage(cottageRes.data);
+        const datesRes = await API.get(`/bookings/cottages/${id}/booked-dates`);
+        const busy = [];
+        datesRes.data.forEach(b => {
+          let start = new Date(b.start_date.split('T')[0]);
+          let end = new Date(b.end_date.split('T')[0]);
+          let current = new Date(start);
+          while (current <= end) {
+            busy.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+          }
+        });
+        setBookedDates(busy);
+      } catch (err) { console.error(err); } finally { setLoading(false); }
+    };
+    fetchData();
+  }, [id]);
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      // 1. Грузим данные домика
-      const cottageRes = await API.get(`/cottages/${id}`);
-      setCottage(cottageRes.data);
-
-      // 2. Грузим занятые даты
-      const datesRes = await API.get(`/bookings/cottages/${id}/booked-dates`);
-      
-      // Преобразуем диапазон [start, end] в массив всех занятых дней
-      const busy = [];
-datesRes.data.forEach(b => {
-  // Используем split('T')[0], чтобы отсечь время и работать только с датой
-  let start = new Date(b.start_date.split('T')[0]);
-  let end = new Date(b.end_date.split('T')[0]);
-  
-  let current = new Date(start);
-  while (current <= end) {
-    busy.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-});
-setBookedDates(busy);
-
-    } catch (err) { console.error(err); } finally { setLoading(false); }
-  };
-  fetchData();
-}, [id]);
-
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Загрузка...</div>;
-  if (!cottage) return <div style={{ padding: '40px', textAlign: 'center' }}>Коттедж не найден</div>;
+  if (loading) return <div>Загрузка...</div>;
 
   return (
-    console.log("Занятые даты:", bookedDates), // ДЛЯ ОТЛАДКИ
-    <div style={{ padding: '40px 5%', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '40px 5%', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* ОТОБРАЖЕНИЕ УВЕДОМЛЕНИЯ */}
+      {notification.message && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999 }}>
+          <Notification 
+            message={notification.message} 
+            isSuccess={notification.isSuccess} 
+            onClose={() => setNotification({ ...notification, message: null })} 
+          />
+        </div>
+      )}
+
       {calendarStyles}
       <div style={{ display: 'flex', gap: '50px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         

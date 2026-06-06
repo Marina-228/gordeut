@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
+import ConfirmModal from '../components/ConfirmModal';
+import Notification from '../components/Notification';
+import { AuthContext } from '../context/AuthContext'; // Убедитесь, что путь к файлу верный
 
 export default function Home() {
   const navigate = useNavigate(); 
@@ -14,7 +17,11 @@ export default function Home() {
 
   // Получаем данные текущего пользователя, чтобы узнать его роль
   const currentUser = JSON.parse(localStorage.getItem('user')) || null;
-  const isAdmin = currentUser?.role === 'admin';
+  const { user } = useContext(AuthContext); // Теперь useContext будет работать
+  const isAdmin = user?.role === 'admin'; // Это та самая логика прав
+
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: '' });
+  const [errorMsg, setErrorMsg] = useState(null); // Состояние для ошибки
 
   // Выносим запрос в отдельную функцию, чтобы её можно было вызывать и при загрузке, и после удаления
   const fetchCottages = async (page) => {
@@ -30,7 +37,7 @@ export default function Home() {
     } catch (err) {
       console.error("Ошибка при загрузке домиков:", err);
       const serverDetail = err.response?.data?.error || err.response?.data?.message || err.message;
-      alert(`Ошибка БД на бэкенде: ${serverDetail}`);
+      setErrorMsg("Ошибка БД на бэкенде: ${serverDetail}");
       setError(`Не удалось загрузить каталог домиков. Причина: ${serverDetail}`);
     } finally {
       setLoading(false);
@@ -55,37 +62,29 @@ export default function Home() {
     }
   };
 
-  // Функция удаления карточки домика
-  const handleDelete = async (id, name) => {
-    const confirmDelete = window.confirm(`Вы уверены, что хотите удалить объект "${name || 'Без названия'}"?`);
-    if (!confirmDelete) return;
+    // Замените старую функцию handleDelete на эту:
+  const handleDelete = (id, name) => {
+    setDeleteModal({ isOpen: true, id, name });
+  };
 
+  // Создайте отдельную функцию для выполнения самого удаления
+  const confirmDeleteAction = async () => {
+    const { id } = deleteModal;
     try {
       const token = localStorage.getItem('token');
       
-      if (!token) {
-        alert("Ошибка: Токен авторизации не найден. Пожалуйста, перезайдите в аккаунт.");
-        return;
-      }
-
-      const response = await API.delete(`/cottages/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}` 
-        }
+      const response = await API.delete(`/cottages/${deleteModal.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.data.success) {
-        alert('Объявление успешно удалено!');
-        // Перезапрашиваем данные текущей страницы, чтобы обновить список и подтянуть следующий домик
-        fetchCottages(currentPage);
-      } else {
-        alert(`Не удалось удалить: ${response.data.message}`);
+        setErrorMsg("Объявление успешно удалено!");
+        fetchCottages(currentPage); // Перезагружаем список
       }
-
     } catch (err) {
-      console.error("Полная ошибка удаления на фронте:", err);
-      const serverMessage = err.response?.data?.message || err.response?.data?.error;
-      alert(`Ошибка при удалении: ${serverMessage || 'Сервер не отвечает или упал'}`);
+      setErrorMsg("Ошибка при удалении");
+    } finally {
+      setDeleteModal({ isOpen: false, id: null, name: '' }); // Закрываем модалку
     }
   };
 
@@ -93,10 +92,16 @@ export default function Home() {
   if (error) return <div style={{ padding: '20px', color: '#e74c3c', textAlign: 'center' }}>⚠️ {error}</div>;
 
   return (
-    <div style={{ padding: '0 20px 20px 20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
+    <div>
+      {errorMsg && (
+        <Notification message={errorMsg} onClose={() => setErrorMsg(null)} />
+      )}
+    <div style={{ padding: '0 20px 20px 20px', fontFamily: 'sans-serif', maxWidth: '1200px', margin: '0 auto', width: '100%', 
+   // Ограничивает ширину, чтобы контент не растягивался на огромные экраны
+   }}>
       
       {/* Кнопка навигации к поиску */}
-      <div style={{ marginTop: '23px', marginBottom: '20px' }}>
+      <div style={{ marginTop: '23px', marginBottom: '20px', padding: '0 10px' }}>
         <button 
           onClick={() => navigate('/search')}
           style={{ 
@@ -125,7 +130,7 @@ export default function Home() {
       {/* Сетка домиков */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '20px',
         alignItems: 'stretch',
         marginTop: '10px' 
@@ -143,7 +148,8 @@ export default function Home() {
               padding: '20px', 
               alignItems: 'center', 
               justifyContent: 'space-between',
-              position: 'relative'
+              position: 'relative',
+              minWidth: '280px'
             }}
           >
             {/* Контейнер контента */}
@@ -233,36 +239,37 @@ export default function Home() {
               </Link>
 
               {/* Кнопка Удалить (Доступна только админам) */}
-              {isAdmin && (
-                <button
-                  onClick={() => handleDelete(cottage.id, cottage.name)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    textAlign: 'center',
-                    background: '#fff',
-                    border: '2px solid #e74c3c',
-                    color: '#e74c3c',
-                    padding: '10px',
-                    borderRadius: '10px',
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.background = '#e74c3c';
-                    e.target.style.color = '#fff';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.background = '#fff';
-                    e.target.style.color = '#e74c3c';
-                  }}
-                >
-                  Удалить объект
-                </button>
-              )}
+              {/* Кнопка Удалить (Доступна только админам) */}
+{user && user.role === 'admin' && (
+  <button
+    onClick={() => handleDelete(cottage.id, cottage.name)}
+    style={{
+      display: 'block',
+      width: '100%',
+      boxSizing: 'border-box',
+      textAlign: 'center',
+      background: '#fff',
+      border: '2px solid #e74c3c',
+      color: '#e74c3c',
+      padding: '10px',
+      borderRadius: '10px',
+      fontWeight: 'bold',
+      fontSize: '14px',
+      cursor: 'pointer',
+      transition: 'all 0.2s'
+    }}
+    onMouseOver={(e) => {
+      e.target.style.background = '#e74c3c';
+      e.target.style.color = '#fff';
+    }}
+    onMouseOut={(e) => {
+      e.target.style.background = '#fff';
+      e.target.style.color = '#e74c3c';
+    }}
+  >
+    Удалить объект
+  </button>
+)}
 
             </div>
           </div>
@@ -328,7 +335,13 @@ export default function Home() {
           </button>
         </div>
       )}
-      
+      <ConfirmModal 
+  isOpen={deleteModal.isOpen}
+  message={`Вы уверены, что хотите удалить объект "${deleteModal.name}"?`}
+  onConfirm={confirmDeleteAction}
+  onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })}
+/>
+    </div>
     </div>
   );
 }

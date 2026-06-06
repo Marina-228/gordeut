@@ -1,9 +1,0 @@
-POST http://localhost:5000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Марина",
-  "email": "marina@example.com",
-  "password": "gordeyut_secret_pass",
-  "phone": "+79991112233"
-}

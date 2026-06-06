@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 
+
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext); // Получаем функцию login из контекста

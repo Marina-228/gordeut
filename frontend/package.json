@@ -4,7 +4,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -17,6 +16,7 @@
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.6",
     "react-easy-crop": "^5.5.7",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.15.1"
   },
   "devDependencies": {

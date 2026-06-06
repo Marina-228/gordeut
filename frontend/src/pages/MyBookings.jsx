@@ -1,43 +1,52 @@
 import { useEffect, useState } from 'react';
 import API from '../api/axios';
+import Notification from '../components/Notification'; 
+import ConfirmModal from '../components/ConfirmModal'; 
 
 export default function MyBookings() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ message: null, isSuccess: false });
 
   useEffect(() => {
-  // Определяем функцию ВНУТРИ эффекта, чтобы избежать каскадных рендеров
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const { data } = await API.get('/bookings/my');
-      setBookings(data);
-    } catch (err) {
-      console.error("Ошибка:", err);
-    } finally {
-      setLoading(false);
-    }
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const { data } = await API.get('/bookings/my');
+        setBookings(data);
+      } catch (err) {
+        console.error("Ошибка:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const initiateCancel = (bookingId) => {
+    setBookingToCancel(bookingId);
+    setIsModalOpen(true);
   };
 
-  fetchData();
-}, []); // Пустой массив зависимостей
-
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm("Вы уверены, что хотите отменить бронирование?")) return;
-
+  const confirmCancel = async () => {
     try {
-      await API.delete(`/bookings/${bookingId}`);
-      alert("✅ Бронирование отменено");
+      await API.delete(`/bookings/${bookingToCancel}`);
+      setNotification({ message: "Бронирование отменено", isSuccess: true });
       
-      // Локальное обновление статуса
       setBookings(prev => 
-        prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b)
+        prev.map(b => b.id === bookingToCancel ? { ...b, status: 'cancelled' } : b)
       );
     } catch (err) {
-      alert("❌ Не удалось отменить: " + (err.response?.data?.message || "Ошибка"));
+      const errMsg = err.response?.data?.message || "Ошибка при отмене";
+      setNotification({ message: "❌ " + errMsg, isSuccess: false });
+    } finally {
+      setIsModalOpen(false);
+      setBookingToCancel(null);
     }
   };
-  
+
   const getStatusInfo = (status) => {
     switch(status) {
       case 'confirmed': return { label: 'Подтверждено', color: '#059669', bg: '#d1fae5' };
@@ -49,8 +58,30 @@ export default function MyBookings() {
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', fontSize: '18px', color: '#666' }}>Загрузка...</div>;
 
+  // ДОБАВЛЕН RETURN ЗДЕСЬ
   return (
     <div style={{ padding: '40px 5%', width: '100%', boxSizing: 'border-box', fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* Уведомления */}
+      {notification.message && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999 }}>
+          <Notification 
+            message={notification.message} 
+            isSuccess={notification.isSuccess} 
+            onClose={() => setNotification({ message: null, isSuccess: false })} 
+          />
+        </div>
+      )}
+
+      {/* Модальное окно подтверждения */}
+      <ConfirmModal 
+        isOpen={isModalOpen}
+        title="Отмена бронирования"
+        message="Вы уверены, что хотите отменить это бронирование? Это действие нельзя будет отменить."
+        onConfirm={confirmCancel}
+        onClose={() => setIsModalOpen(false)}
+      />
+
       <header style={{ marginBottom: '40px' }}>
         <h1 style={{ fontSize: '36px', margin: '0 0 10px 0', color: '#111', fontWeight: '800' }}>Мои бронирования</h1>
         <p style={{ color: '#666', fontSize: '16px' }}>Управляйте историей ваших поездок.</p>
@@ -65,12 +96,10 @@ export default function MyBookings() {
       ) : (
         <div style={{ 
           display: 'grid', 
-          // Адаптивная сетка: на мобильных от 320px, на десктопах заполняет доступное место
           gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
           gap: '24px' 
         }}>
           {bookings.map(b => {
-            
             const statusInfo = getStatusInfo(b.status);
             const imageUrl = b.media_urls?.[0]; 
 
@@ -81,7 +110,7 @@ export default function MyBookings() {
                 borderRadius: '24px', 
                 boxShadow: '0 8px 24px rgba(0,0,0,0.05)',
                 display: 'flex',
-                flexDirection: 'column', // Удобнее на мобильных
+                flexDirection: 'column',
                 gap: '16px',
                 border: '1px solid #f3f4f6'
               }}>
@@ -111,7 +140,7 @@ export default function MyBookings() {
 
                   {b.status === 'pending' && (
                     <button 
-                      onClick={() => handleCancel(b.id)}
+                      onClick={() => initiateCancel(b.id)}
                       style={{ background: '#ff4d4d', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer' }}
                     >
                       Отменить

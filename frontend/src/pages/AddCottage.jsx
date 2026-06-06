@@ -1,85 +1,68 @@
-import React, { useState, useEffect, useContext } from 'react'; // Добавьте useContext
-import { CottageContext } from '../context/CottageContext'; // Укажите путь к вашему контексту
+import React, { useState, useEffect, useContext } from 'react'; 
+import { CottageContext } from '../context/CottageContext'; 
 import Cropper from 'react-easy-crop';
+import Notification from '../components/Notification';
 
 const styles = {
-
-  previewCard: { 
+  pageWrapper: { 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'flex-start', 
+    minHeight: '100vh', 
+    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: заставляем блок занимать всю ширину, чтобы он не сжимался
+    width: '100%', 
+    flexGrow: 1, 
+    padding: '40px 20px', 
+    background: '#f9f9f9',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    boxSizing: 'border-box'
+  },
+  container: { 
+    display: 'grid', 
+    gap: '30px', 
+    // Жестко фиксируем сетку
+    width: '100%',
+    maxWidth: '1050px', 
+    alignItems: 'stretch', 
+    margin: '0 auto' 
+  },
+  card: { 
     background: '#fff', 
-    padding: '20px', 
+    padding: '40px',
     borderRadius: '20px', 
     boxShadow: '0 8px 30px rgba(0,0,0,0.06)', 
     display: 'flex', 
-    flexDirection: 'column', 
-    height: 'fit-content',
-    position: 'sticky', 
-    top: '40px', 
+    flexDirection: 'column',
+    width: '100%', 
+    minHeight: '560px', 
+    boxSizing: 'border-box'
+  },
+  previewCard: { 
+    background: '#fff', 
+    padding: '40px', 
+    borderRadius: '20px', 
+    boxShadow: '0 8px 30px rgba(0,0,0,0.06)', 
     border: '1px solid #eee', 
-    alignItems: 'center'
+    display: 'flex', 
+    flexDirection: 'column',
+    width: '100%', 
+    boxSizing: 'border-box'
   },
-
-  pageWrapper: { 
-    display: 'flex', justifyContent: 'center', alignItems: 'flex-start', 
-    minHeight: '100vh', padding: '60px 20px', background: '#f9f9f9',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-  },
-  container: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', maxWidth: '1000px', width: '100%' },
-  card: { 
-    background: '#fff', padding: '30px', borderRadius: '20px', 
-    boxShadow: '0 8px 30px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', height: 'fit-content' 
-  },
-  contentWrapper: { paddingTop: '20px', display: 'flex', flexDirection: 'column' },
   input: (hasError) => ({ 
     width: '100%', padding: '14px', borderRadius: '12px', boxSizing: 'border-box',
     border: hasError ? '2px solid #d9534f' : '1px solid #e0e0e0', 
-    marginBottom: '5px' 
+    marginBottom: '15px' 
   }),
   textArea: { 
     width: '100%', padding: '14px', borderRadius: '12px', boxSizing: 'border-box',
-    border: '1px solid #e0e0e0', marginBottom: '5px', minHeight: '100px', resize: 'vertical'
+    border: '1px solid #e0e0e0', marginBottom: '15px', minHeight: '120px', resize: 'vertical'
   },
-  errorText: { color: '#d9534f', fontSize: '12px', marginBottom: '10px', fontWeight: '600' },
+  errorText: { color: '#d9534f', fontSize: '12px', marginBottom: '10px', marginTop: '-10px', fontWeight: '600' },
   label: { display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' },
   button: { 
     padding: '14px 25px', background: 'rgb(89, 136, 90)', color: '#fff', 
     border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '16px',
-    fontWeight: 'bold', width: '100%', marginTop: '10px' 
-  }
-};
-
-const buttonStyles = {
-  main: {
-    padding: '12px 20px',
-    background: 'linear-gradient(135deg, #6b9389 0%, #4a754b 100%)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontSize: '15px',
-    fontWeight: '600',
-    transition: 'transform 0.2s, background 0.3s',
-    boxShadow: '0 4px 12px rgba(89, 136, 90, 0.3)'
-  },
-  secondary: {
-    padding: '12px 20px',
-    background: '#f0f0f0',
-    color: '#333',
-    border: '1px solid #ddd',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontSize: '15px',
-    fontWeight: '600',
-    transition: 'background 0.3s'
-  },
-  danger: {
-    padding: '8px 16px',
-    background: '#ffebee',
-    color: '#d32f2f',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    marginTop: '10px'
+    fontWeight: 'bold', width: '100%'
   }
 };
 
@@ -88,7 +71,6 @@ const BELARUS_REGIONS = [
   "Гродненская область", "Минская область", "Могилевская область"
 ];
 
-// Вспомогательная функция для обрезки canvas
 const getCroppedImg = (imageSrc, pixelCrop) => {
   return new Promise((resolve) => {
     const image = new Image();
@@ -104,7 +86,6 @@ const getCroppedImg = (imageSrc, pixelCrop) => {
   });
 };
 
-// Компонент обрезки (вызывать внутри шага 4)
 function ImageCropper({ image, onDone }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -113,12 +94,14 @@ function ImageCropper({ image, onDone }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 1000, padding: 20 }}>
       <Cropper image={image} crop={crop} zoom={zoom} aspect={16/9} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, p) => setArea(p)} />
-      <button style={{ position: 'absolute', bottom: 20, right: 20 }} onClick={async () => onDone(await getCroppedImg(image, area))}>Сохранить</button>
+      <button style={{ position: 'absolute', bottom: 20, right: 20, ...styles.button, width: 'auto' }} onClick={async () => onDone(await getCroppedImg(image, area))}>Сохранить обрезку</button>
     </div>
   );
-};
+}
 
 export default function AddCottageWizard() {
+  const [errorMsg, setErrorMsg] = useState(null); 
+  const [isSuccess, setIsSuccess] = useState(false); 
   const { setCottages } = useContext(CottageContext);
   const [croppedImg, setCroppedImg] = useState(null);
   const [rawFile, setRawFile] = useState(null);
@@ -128,8 +111,6 @@ export default function AddCottageWizard() {
     region: '', city: '', address: '', description: '', price: '' 
   });
   const [errors, setErrors] = useState({});
-
-  // 1. Добавляем состояние для отслеживания мобильной версии
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -138,338 +119,274 @@ export default function AddCottageWizard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [files, setFiles] = useState([]);
-
   useEffect(() => {
     const newErrors = {};
     const min = Number(formData.min_guests);
     const max = Number(formData.max_guests);
     const price = Number(formData.price);
 
-    if (formData.rooms !== '' && Number(formData.rooms) <= 0) newErrors.rooms = "Где положительное число? 😡";
-    if (formData.min_guests !== '' && min <= 0) newErrors.min_guests = "Где положительное число? 😡";
-    if (formData.max_guests !== '' && max <= 0) newErrors.max_guests = "Где положительное число? 😡";
+    if (formData.rooms !== '' && Number(formData.rooms) <= 0) newErrors.rooms = "Нужно положительное число";
+    if (formData.min_guests !== '' && min <= 0) newErrors.min_guests = "Нужно положительное число";
+    if (formData.max_guests !== '' && max <= 0) newErrors.max_guests = "Нужно положительное число";
     if (formData.min_guests !== '' && formData.max_guests !== '' && min > max) {
-      newErrors.min_guests = "Мин. больше макс 😡";
-      newErrors.max_guests = "Макс. меньше мин 😡";
+      newErrors.min_guests = "Мин. больше макс.";
+      newErrors.max_guests = "Макс. меньше мин.";
     }
-    if (formData.price !== '' && price < 0) newErrors.price = "Цена не может быть отрицательной..";
+    if (formData.price !== '' && price < 0) newErrors.price = "Цена не может быть отрицательной";
     setErrors(newErrors);
   }, [formData]);
 
   const handleNext = () => {
     if (step === 1) {
-      if (Object.keys(errors).length === 0 && formData.rooms && formData.min_guests && formData.max_guests) setStep(2);
-      else alert("Исправьте ошибки на первом шаге!");
+      if (Object.keys(errors).length === 0 && formData.name && formData.rooms && formData.min_guests && formData.max_guests) setStep(2);
+      else {
+        setErrorMsg("Заполните все поля без ошибок!");
+        setIsSuccess(false);
+      }
     } else if (step === 2) {
       if (formData.region && formData.city && formData.address) setStep(3);
-      else alert("Заполните адресные данные!");
+      else {
+        setErrorMsg("Заполните адресные данные!");
+        setIsSuccess(false);
+      }
     } else if (step === 3) {
       if (formData.price !== '' && !errors.price) setStep(4);
-      else alert("Введите корректную цену!");
+      else {
+        setErrorMsg("Введите корректную цену!");
+        setIsSuccess(false);
+      }
     } else {
       setStep(step + 1);
     }
   };
 
   const handleSubmit = async () => {
-  if (!formData.name || !formData.price || !croppedImg) {
-    alert("Пожалуйста, заполните основные поля и добавьте фото!");
-    return;
-  }
-
-  const cottageData = { ...formData, image: croppedImg };
-
-  try {
-    // ДОСТАЕМ ТОКЕН (измени ключ 'token', если у тебя он называется иначе)
-    const token = localStorage.getItem('token'); 
-
-    const response = await fetch('http://localhost:5000/api/cottages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // ОБЯЗАТЕЛЬНО передаем токен в заголовках
-        'Authorization': `Bearer ${token}` 
-      },
-      body: JSON.stringify(cottageData),
-    });
-
-    const result = await response.json();
-
-    if (response.ok && result.success) {
-      setCottages(prev => [...prev, result.data]);
-      alert("Объявление успешно сохранено! 🎉");
-    } else {
-      // Исправляем вывод ошибки, если сервер вернул message вместо error
-      alert(`Ошибка сервера: ${result.message || result.error || 'Неизвестная ошибка'}`);
+    if (!formData.name || !formData.price || !croppedImg) {
+      setErrorMsg("Пожалуйста, заполните основные поля и добавьте фото!");
+      setIsSuccess(false);
+      return;
     }
-  } catch (error) {
-    console.error("Ошибка запроса:", error);
-    alert("Не удалось связаться с сервером.");
-  }
-};
+
+    const cottageData = { ...formData, image: croppedImg };
+
+    try {
+      const token = localStorage.getItem('token'); 
+      const response = await fetch('http://localhost:5000/api/cottages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(cottageData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setCottages(prev => [...prev, result.data]);
+        setIsSuccess(true); 
+        setErrorMsg("Объявление успешно сохранено!");
+      } else {
+        setIsSuccess(false); 
+        setErrorMsg(`Ошибка: ${result.message || result.error || 'Неизвестная ошибка'}`);
+      }
+    } catch (error) {
+      console.error("Ошибка запроса:", error);
+      setErrorMsg("Не удалось связаться с сервером.");
+      setIsSuccess(false);
+    }
+  };
 
   return (
-    <div style={styles.pageWrapper}>
+    <div>
+      {errorMsg && (
+        <Notification message={errorMsg} isSuccess={isSuccess} onClose={() => setErrorMsg(null)} />
+      )}
       
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2>{step === 1 ? 'Основная информация' : step === 2 ? 'Расположение' : step === 3 ? 'Описание и цена' : 'Фото'}</h2>
+      <div style={styles.pageWrapper}>
+        {/* ИСПРАВЛЕНИЕ: Сетка теперь динамически меняет колонки, но общая ширина зафиксирована */}
+        <div style={{ ...styles.container, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
           
-          <div style={styles.contentWrapper}>
-           {step === 1 && (
-  <>
-    <label style={styles.label}>Название</label>
-    <input 
-      style={styles.input(false)} 
-      value={formData.name} 
-      onChange={e => setFormData({...formData, name: e.target.value})} 
-    />
-    
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-       <div>
-         <label style={styles.label}>Комнат</label>
-         <input 
-           style={styles.input(!!errors.rooms)} 
-           type="number" 
-           value={formData.rooms} 
-           onChange={e => setFormData({...formData, rooms: e.target.value})} 
-         />
-         {errors.rooms && <div style={styles.errorText}>{errors.rooms}</div>}
-       </div>
-       <div>
-         <label style={styles.label}>Тип</label>
-         <select 
-           style={styles.input(false)} 
-           value={formData.type} 
-           onChange={e => setFormData({...formData, type: e.target.value})}
-         >
-           <option value="house">Дом</option>
-           <option value="apartment">Квартира</option>
-         </select>
-       </div>
-    </div>
+          {/* === ЛЕВАЯ КАРТОЧКА (ФОРМА) === */}
+          <div style={styles.card}>
+            <h2 style={{ marginTop: 0, marginBottom: '25px', color: '#222' }}>
+              {step === 1 ? 'Основная информация' : step === 2 ? 'Расположение' : step === 3 ? 'Описание и цена' : 'Фото'}
+            </h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+              
+              {/* --- ШАГ 1 --- */}
+              {step === 1 && (
+                <>
+                  <label style={styles.label}>Название</label>
+                  <input style={styles.input(false)} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Уютный домик в лесу" />
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={styles.label}>Комнат</label>
+                      <input style={styles.input(!!errors.rooms)} type="number" value={formData.rooms} onChange={e => setFormData({...formData, rooms: e.target.value})} />
+                      {errors.rooms && <div style={styles.errorText}>{errors.rooms}</div>}
+                    </div>
+                    <div>
+                      <label style={styles.label}>Тип</label>
+                      <select style={styles.input(false)} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                        <option value="house">Дом</option>
+                        <option value="apartment">Квартира</option>
+                      </select>
+                    </div>
+                  </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-       <div>
-         <label style={styles.label}>Мин. гостей</label>
-         <input 
-           style={styles.input(!!errors.min_guests)} 
-           type="number" 
-           value={formData.min_guests} 
-           onChange={e => setFormData({...formData, min_guests: e.target.value})} 
-         />
-       </div>
-       <div>
-         <label style={styles.label}>Макс. гостей</label>
-         <input 
-           style={styles.input(!!errors.max_guests)} 
-           type="number" 
-           value={formData.max_guests} 
-           onChange={e => setFormData({...formData, max_guests: e.target.value})} 
-         />
-       </div>
-    </div>
-    {errors.min_guests && <div style={styles.errorText}>{errors.min_guests}</div>}
-    {errors.max_guests && <div style={styles.errorText}>{errors.max_guests}</div>}
-    
-    <button style={styles.button} onClick={handleNext}>Далее</button>
-  </>
-)}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={styles.label}>Мин. гостей</label>
+                      <input style={styles.input(!!errors.min_guests)} type="number" value={formData.min_guests} onChange={e => setFormData({...formData, min_guests: e.target.value})} />
+                      {errors.min_guests && <div style={styles.errorText}>{errors.min_guests}</div>}
+                    </div>
+                    <div>
+                      <label style={styles.label}>Макс. гостей</label>
+                      <input style={styles.input(!!errors.max_guests)} type="number" value={formData.max_guests} onChange={e => setFormData({...formData, max_guests: e.target.value})} />
+                      {errors.max_guests && <div style={styles.errorText}>{errors.max_guests}</div>}
+                    </div>
+                  </div>
 
-           {/* Шаг 2 */}
-{step === 2 && (
-  <>
-    <label style={styles.label}>Область</label>
-    <select 
-      style={styles.input(false)} 
-      value={formData.region} // Привязка к состоянию
-      onChange={e => setFormData({...formData, region: e.target.value})}
-    >
-      <option value="">Выберите область</option>
-      {BELARUS_REGIONS.map(reg => <option key={reg} value={reg}>{reg}</option>)}
-    </select>
+                  <div style={{ flexGrow: 1 }} /> 
+                  <button style={{...styles.button, margin: 0}} onClick={handleNext}>Далее</button>
+                </>
+              )}
 
-    <label style={styles.label}>Город</label>
-    <input 
-      style={styles.input(false)} 
-      value={formData.city} // Привязка к состоянию
-      onChange={e => setFormData({...formData, city: e.target.value})} 
-    />
+              {/* --- ШАГ 2 --- */}
+              {step === 2 && (
+                <>
+                  <label style={styles.label}>Область</label>
+                  <select style={styles.input(false)} value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})}>
+                    <option value="">Выберите область</option>
+                    {BELARUS_REGIONS.map(reg => <option key={reg} value={reg}>{reg}</option>)}
+                  </select>
 
-    <label style={styles.label}>Адрес</label>
-    <input 
-      style={styles.input(false)} 
-      value={formData.address} // Привязка к состоянию
-      onChange={e => setFormData({...formData, address: e.target.value})} 
-    />
-    
-    <div style={{ display: 'flex', gap: '10px' }}>
-      <button 
-        style={{...styles.button, background: '#7a9cb2'}} 
-        onClick={() => setStep(1)}
-      >
-        Назад
-      </button>
-      <button style={styles.button} onClick={handleNext}>Далее</button>
-    </div>
-  </>
-)}
+                  <label style={styles.label}>Город</label>
+                  <input style={styles.input(false)} value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
 
-            {/* Шаг 3 */}
-{step === 3 && (
-  <>
-    <label style={styles.label}>Описание</label>
-    <textarea 
-      style={styles.textArea} 
-      value={formData.description} // Привязка к состоянию
-      onChange={e => setFormData({...formData, description: e.target.value})} 
-    />
+                  <label style={styles.label}>Адрес</label>
+                  <input style={styles.input(false)} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                  
+                  <div style={{ flexGrow: 1 }} /> 
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <button style={{...styles.button, background: '#7a9cb2', flex: 1, margin: 0}} onClick={() => setStep(1)}>Назад</button>
+                    <button style={{...styles.button, flex: 1, margin: 0}} onClick={handleNext}>Далее</button>
+                  </div>
+                </>
+              )}
 
-    <label style={styles.label}>Цена за ночь</label>
-    <input 
-      style={styles.input(!!errors.price)} 
-      type="number" 
-      value={formData.price} // Привязка к состоянию
-      onChange={e => setFormData({...formData, price: e.target.value})} 
-    />
-    {errors.price && <div style={styles.errorText}>{errors.price}</div>}
-    
-    <div style={{ display: 'flex', gap: '10px' }}>
-      <button 
-        style={{...styles.button, background: '#7a9cb2'}} 
-        onClick={() => setStep(2)}
-      >
-        Назад
-      </button>
-      <button style={styles.button} onClick={handleNext}>Далее</button>
-    </div>
-  </>
-)}
+              {/* --- ШАГ 3 --- */}
+              {step === 3 && (
+                <>
+                  <label style={styles.label}>Описание</label>
+                  <textarea style={styles.textArea} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Опишите все преимущества вашего объекта..." />
+                  
+                  <label style={styles.label}>Цена за ночь (BYN)</label>
+                  <input style={styles.input(!!errors.price)} type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+                  {errors.price && <div style={styles.errorText}>{errors.price}</div>}
+                  
+                  <div style={{ flexGrow: 1 }} /> 
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <button style={{...styles.button, background: '#7a9cb2', flex: 1, margin: 0}} onClick={() => setStep(2)}>Назад</button>
+                    <button style={{...styles.button, flex: 1, margin: 0}} onClick={handleNext}>Далее</button>
+                  </div>
+                </>
+              )}
 
-{/* ЛЕВАЯ ЧАСТЬ (внутри формы) */}
-{step === 4 && (
-  <div style={{ textAlign: 'center', paddingTop: '10px' }}>
-    <label style={{ display: 'block', marginBottom: '20px', color: '#666' }}>
-      {croppedImg ? "Фото успешно добавлено" : "Выберите главное фото для объявления"}
-    </label>
+              {/* --- ШАГ 4 --- */}
+              {step === 4 && (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <label style={{ display: 'block', marginBottom: '15px', color: '#666' }}>
+                      {croppedImg ? "Фото успешно добавлено" : "Выберите главное фото для объявления"}
+                    </label>
 
-    {!croppedImg && !rawFile && (
-      <label style={{ 
-        ...styles.button, 
-        display: 'block', // Меняем на block, чтобы растянуть на 100%
-        width: '100%',    // Растягиваем на всю ширину
-        boxSizing: 'border-box', // Чтобы padding не вылезал за границы
-        cursor: 'pointer', 
-        background: '#f0f0f0', 
-        color: '#333',
-        border: '2px dashed #ccc',
-        padding: '16px',
-        marginTop: '0'
-      }}>
-        Выбрать файл
-        <input 
-          type="file" 
-          accept="image/*" 
-          onChange={(e) => e.target.files[0] && setRawFile(URL.createObjectURL(e.target.files[0]))} 
-          style={{ display: 'none' }} 
-        />
-      </label>
-    )}
+                    {!croppedImg && !rawFile && (
+                      <label style={{ 
+                        ...styles.button, 
+                        display: 'block', 
+                        background: '#f0f0f0', color: '#333',
+                        border: '2px dashed #ccc', padding: '20px',
+                        cursor: 'pointer', margin: 0
+                      }}>
+                        Выбрать файл
+                        <input type="file" accept="image/*" onChange={(e) => e.target.files[0] && setRawFile(URL.createObjectURL(e.target.files[0]))} style={{ display: 'none' }} />
+                      </label>
+                    )}
 
-    {rawFile && !croppedImg && (
-      <ImageCropper image={rawFile} onDone={(url) => { setCroppedImg(url); setRawFile(null); }} />
-    )}
+                    {rawFile && !croppedImg && (
+                      <ImageCropper image={rawFile} onDone={(url) => { setCroppedImg(url); setRawFile(null); }} />
+                    )}
 
-    {croppedImg && (
-      <div style={{ position: 'relative', marginTop: 10 }}>
-        <img src={croppedImg} style={{ width: '100%', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
-        <button 
-          style={{ 
-            ...styles.button, 
-            width: '100%', // Растягиваем кнопку изменения
-            background: '#fff', 
-            color: '#d9534f', 
-            border: '1px solid #d9534f',
-            marginTop: '15px',
-            padding: '12px'
-          }} 
-          onClick={() => { setCroppedImg(null); setRawFile(null); }}
-        >
-          Изменить фото
-        </button>
-      </div>
-    )}
+                    {croppedImg && (
+                      <div style={{ position: 'relative' }}>
+                        <img src={croppedImg} alt="Preview" style={{ width: '100%', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
+                        <button 
+                          style={{ ...styles.button, background: '#fff', color: '#d9534f', border: '1px solid #d9534f', marginTop: '15px' }} 
+                          onClick={() => { setCroppedImg(null); setRawFile(null); }}
+                        >
+                          Заменить фото
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-    <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-      {/* Теперь кнопки навигации тоже занимают по 50% ширины каждая */}
-      <button style={{...styles.button, background: '#7a9cb2', width: '100%'}} onClick={() => setStep(3)}>Назад</button>
-      <button 
-  style={{...styles.button, width: '100%'}} 
-  onClick={handleSubmit} // Вместо alert("Объявление сохранено!")
->
-  Сохранить 
-</button>
-    </div>
-  </div>
-)}
+                  <div style={{ flexGrow: 1 }} /> 
+                  <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+                    <button style={{...styles.button, background: '#7a9cb2', flex: 1, margin: 0}} onClick={() => setStep(3)}>Назад</button>
+                    <button style={{...styles.button, flex: 1, margin: 0}} onClick={handleSubmit}>Сохранить</button>
+                  </div>
+                </>
+              )}
+
             </div>
-    </div>
-{!isMobile && (
-<div style={{ ...styles.card, position: 'sticky', top: '40px', border: '1px solid #eee', padding: '20px', alignItems: 'center' }}>
-  <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#333', textAlign: 'center' }}>Предпросмотр</h3>
-  
-  {/* Блок изображения: фиксированная высота 180px */}
-  <div style={{ 
-    width: '100%', 
-    /* Убираем жесткий height, чтобы картинка сама подстраивалась под пропорции 16/9, 
-       как в большинстве кропперов */
-    aspectRatio: '16 / 9', 
-    backgroundColor: '#f0f0f0', 
-    borderRadius: '12px', 
-    marginBottom: '15px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden'
-  }}>
-    {croppedImg ? (
-      <img 
-        src={croppedImg} 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'cover' // Это сохранит пропорции картинки
-        }} 
-      />
-    ) : (
-      <span style={{ color: '#aaa', fontSize: '13px' }}>Нет фото</span>
-    )}
-  </div>
+          </div>
 
-  {/* Остальной контент */}
-  <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', color: '#222', textAlign: 'center' }}>
-    {formData.name || 'Название объекта'}
-  </h2>
+          {/* === ПРАВАЯ КАРТОЧКА (ПРЕДПРОСМОТР) === */}
+          {!isMobile && (
+            <div style={styles.previewCard}>
+              <h3 style={{ marginTop: 0, marginBottom: '25px', color: '#333', textAlign: 'center' }}>Предпросмотр</h3>
+              
+              <div style={{ 
+                width: '100%', aspectRatio: '16 / 9', backgroundColor: '#f0f0f0', 
+                borderRadius: '12px', marginBottom: '20px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+              }}>
+                {croppedImg ? (
+                  <img src={croppedImg} alt="Cottage" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ color: '#aaa', fontSize: '14px' }}>Нет фото</span>
+                )}
+              </div>
 
-  <div style={{ textAlign: 'center', color: '#666', fontSize: '14px', marginBottom: '15px', lineHeight: '1.3' }}>
-    <div style={{ fontWeight: '600', color: '#333' }}>
-      {formData.rooms ? `${formData.rooms}-ая ${formData.type === 'house' ? 'дом' : 'квартира'}` : 'Объект'}
-    </div>
-    <div style={{ fontStyle: 'italic', marginTop: '2px' }}>
-      {[formData.region, formData.city].filter(Boolean).join(', ') || 'Адрес не указан'}
-    </div>
-  </div>
+              <h2 style={{ margin: '0 0 8px 0', fontSize: '22px', color: '#222', textAlign: 'center' }}>
+                {formData.name || 'Название объекта'}
+              </h2>
 
-  <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '80%', margin: '0 auto 15px auto' }} />
+              <div style={{ textAlign: 'center', color: '#666', fontSize: '15px', marginBottom: '20px', lineHeight: '1.4' }}>
+                <div style={{ fontWeight: '600', color: '#333' }}>
+                  {formData.rooms ? `${formData.rooms}-ая ${formData.type === 'house' ? 'дом' : 'квартира'}` : 'Объект'}
+                </div>
+                <div style={{ fontStyle: 'italic', marginTop: '4px', color: '#888' }}>
+                  {[formData.region, formData.city].filter(Boolean).join(', ') || 'Адрес не указан'}
+                </div>
+              </div>
 
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: '8px' }}>
-    <strong style={{ fontSize: '24px', color: '#598850' }}>
-      {formData.price ? `${formData.price} BYN` : '—'}
-    </strong>
-  </div>
-</div>
-)}
+              <div style={{ flexGrow: 1 }} /> 
+              
+              <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '100%', margin: '0 0 20px 0' }} />
+
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
+                <strong style={{ fontSize: '28px', color: '#598850' }}>
+                  {formData.price ? `${formData.price} BYN` : '—'}
+                </strong>
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );

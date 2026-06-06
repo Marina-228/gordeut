@@ -2,7 +2,6 @@ import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
 export const AuthContext = createContext();
-
 // Создаем клиент один раз
 const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api'
@@ -61,14 +60,14 @@ export const AuthProvider = ({ children }) => {
     setUser((prev) => ({ ...prev, ...newData }));
   };
 
-  return (
-    <AuthContext.Provider value={{ 
+  return (<AuthContext.Provider value={{ 
       user, 
       login, 
       logout, 
-      updateUser, // Добавили сюда
+      updateUser, 
       loading, 
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      apiClient // Добавьте эту строку!
     }}>
       {children}
     </AuthContext.Provider>
